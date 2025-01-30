@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
+import { Asul } from "next/font/google";
 
 type Props = {
   setLoading: (value: boolean) => void;
@@ -50,7 +51,6 @@ export default function UploadDataForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
 
-    console.log("upload button clicked",selectedFiles.length)
     e.preventDefault();
 
     if (selectedFiles.length === 0) {
@@ -71,17 +71,26 @@ export default function UploadDataForm({
       formData.append("userId", user.id);
       formData.append("subFolder", subFolder);
       console.log("Called upload api")
-      const response = await fetch(`/api/upload`, {
+      const response = await fetch(`/api/embed`, {
         method: "POST",
         body: formData,
       });
+      
+      // const res = await fetch(`/api/embed`, {
+      //   method: "POST",
+      //   body: formData,
+      // });
+      
       if (response.ok) {
         enqueueToast("success", "Files uploaded successfully!");
-        setSelectedFiles([]); // Clear the list after successful upload
+        setSelectedFiles([]); 
       } else {
         const errorData = await response.json();
         enqueueToast("error", errorData.message || "Failed to upload files.");
       }
+
+
+
     } catch (error) {
       enqueueToast("error", "An unexpected error occurred.");
     } finally {

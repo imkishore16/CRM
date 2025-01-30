@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { Appbar } from "../Appbar";
 import UploadDataForm from "./UploadData";
 
-export default function SpaceView({
+export default function Upload({
   spaceId,
 }: {
   spaceId: Number;

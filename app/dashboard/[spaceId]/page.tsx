@@ -1,67 +1,72 @@
 "use client";
 import { useEffect, useState } from "react";
 import jwt from "jsonwebtoken";
-import SpaceView from "@/components/SpaceView";
+import Upload from "@/components/upload";
 import ErrorScreen from "@/components/ErrorScreen";
 import LoadingScreen from "@/components/LoadingScreen";
+import { useRouter } from "next/navigation";
 
 
 
-export default function Component({params:{spaceId}}:{params:{spaceId:Number}}) {
+// in this coponents the first page is the dashboard 
+// and the sidepanel will contain the other pages to upload data / view contents uploaded , chat histories etc etc...
 
+type Props = {
+  params: { spaceId: number };
+};
 
+export default function Component({params:{spaceId}}:Props) {
+
+  const router = useRouter(); 
   const [creatorId,setCreatorId]=useState<Number | null>(null);
-  const [loading, setLoading1] = useState(true);
+  const [loading, setLoading] = useState(true);
   
-  // useEffect(()=>{
-  //   async function fetchHostId(){
-  //     try {
-  //       const response = await fetch(`/api/spaces/?spaceId=${spaceId}`,{
-  //         method:"GET"
-  //       });
-  //       const data = await response.json()
-  //       if (!response.ok || !data.success) {
-  //         throw new Error(data.message || "Failed to retreive space's host id");
-  //       }
-  //       setCreatorId(data.hostId)
-       
-
-  //     } catch (error) {
-        
-  //     }
-  //     finally{
-  //       setLoading1(false)
-  //     }
-  //   }
-  //   fetchHostId();
-  // },[spaceId])
-
- 
-
+  const handleNavigation = (path: string) => {
+    router.push(path); 
+  };
   
+  return (
+    <div className="flex">
+      {/* Side Navbar */}
+      <div className="w-64 bg-gray-800 text-white h-screen p-4">
+        <h2 className="text-xl font-bold mb-4">Dashboard</h2>
+        <ul className="space-y-4">
+          <li>
+            <button
+              onClick={() => handleNavigation(`/dashboard/${spaceId}/overview`)} 
+              className="w-full text-left px-4 py-2 rounded hover:bg-gray-700"
+            >
+              Overview
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => handleNavigation(`/dashboard/${spaceId}/upload`)} 
+              className="w-full text-left px-4 py-2 rounded hover:bg-gray-700"
+            >
+              Upload Data
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => handleNavigation(`/dashboard/${spaceId}/settings`)} 
+              className="w-full text-left px-4 py-2 rounded hover:bg-gray-700"
+            >
+              Settings
+            </button>
+          </li>
+          
+        </ul>
+      </div>
 
-  // if (connectionError) {
-  //   return <ErrorScreen>Cannot connect to socket server</ErrorScreen>;
-  // }
-
-  // if (loading) {
-  //   return <LoadingScreen />;
-  // }
-
-  // if (!user) {
-  //   return <ErrorScreen>Please Log in....</ErrorScreen>;
-  // }
-  // if(loading1){
-  // return <LoadingScreen></LoadingScreen>
-  // }
-
-
-  // if(user.id!=creatorId){
-  //   return <ErrorScreen>You are not the creator of this space</ErrorScreen>
-  // }
-
+      {/* Main Content Area */}
+      <div className="flex-1 p-8">
+        {/* Render your analytics or based on the route */}
+        <div> analytics here </div>
+      </div>
+    </div>
+  );
   
-  return <SpaceView spaceId={spaceId}/>
 }
 
 export const dynamic = "auto";

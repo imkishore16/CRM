@@ -23,7 +23,6 @@ export const config = {
     },
 };
 
-
 export async function POST(req: NextRequest) {
   
     try {
