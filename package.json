@@ -34,7 +34,7 @@
     "jsonwebtoken": "^8.5.1",
     "lucide-react": "^0.436.0",
     "mammoth": "^1.9.0",
-    "next": "14.2.7",
+    "next": "15.1.4",
     "next-app": "file:",
     "next-auth": "^4.24.7",
     "next-themes": "^0.3.0",
@@ -66,6 +66,5 @@
     "prisma": "^6.2.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  },
-  "packageManager": "pnpm@9.11.0+sha512.0a203ffaed5a3f63242cd064c8fb5892366c103e328079318f78062f24ea8c9d50bc6a47aa3567cabefd824d170e78fa2745ed1f16b132e16436146b7688f19b"
+  }
 }
