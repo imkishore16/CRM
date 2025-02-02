@@ -24,8 +24,6 @@
     "app": "file:",
     "axios": "^1.7.5",
     "bcryptjs": "^2.4.3",
-    "chromadb": "^1.10.4",
-    "chromadb-default-embed": "^2.13.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "formidable": "^3.5.2",
