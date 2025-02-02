@@ -8,7 +8,8 @@ type Props = {
     params: { spaceId: number };
   };
   
-export default async function UploadPage({params:{spaceId}}:Props) {
+export default async function UploadPage({ params }: Props) {
+    const { spaceId } = await params;
     const session =await  getServerSession(authOptions);
     
     return (

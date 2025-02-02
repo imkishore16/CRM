@@ -4,10 +4,12 @@ import { NextRequest,NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { readFileContent } from '@/lib/serverUtils';
+import { Pinecone } from "@pinecone-database/pinecone";
 
 
 // import { Pipeline } from '@xenova/transformers';
 import { ChromaClient, Collection } from "chromadb";
+
 // import { HfInference } from "@huggingface/inference";
 
 export async function POST(req: NextRequest) {
@@ -27,7 +29,9 @@ export async function POST(req: NextRequest) {
         );
     }
     console.log("initializing chromdb")
-    // const collection = await initializeChromaDB(subFolder,path.join(process.cwd(),"storage"))
+    const dbPath=path.join(process.cwd(),"storage")
+    console.log(dbPath)
+    const collection = await initializePineConeDB(subFolder,dbPath)
     // for (const file of files) {
     //     fileToEmbeddings(file,collection)
     // }
@@ -48,34 +52,30 @@ export async function POST(req: NextRequest) {
 
 
 
-async function initializeChromaDB(collectionName: string, dbPath: string) {
+async function initializePineConeDB(indexName: string, dbPath: string) {
     try {
-    // Check if the .chromadb file already exists
-    //   const dbFilePath = `${dbPath}/${collectionName}db.chromadb`; // Adjust this based on how the ChromaDB file is named
-  
-    //   try {
-    //     await fs.access(dbFilePath); // Check if the .chromadb file exists
-    //     console.log(`Database already exists at ${dbPath}. Using existing database.`);
-    //   } catch (error) {
-    //     // If the database doesn't exist, initialize the database and create the collection
-    //     console.log(`No existing database found at ${dbPath}. Creating new database.`);
-    //   }
-  
-      // Initialize ChromaDB client (this will work whether the database exists or not)
-      const chroma = new ChromaClient({ path: dbPath });
+      const pc = new Pinecone({apiKey:process.env.PINE_CONE_API_KEY??""})
+      
+      const index = pc.index(indexName)
 
-  
-      // Get or create the collection
-      const collection = await chroma.getOrCreateCollection({
-        name: collectionName,
+      if(index!=null)
+        return index
+
+      await pc.createIndex({
+          name: indexName,
+          dimension: 1024,
+          metric: 'cosine',
+          spec: { 
+              serverless: { 
+              cloud: 'aws', 
+              region: 'us-east-1' 
+              }
+          } 
       });
   
-      console.log(`Collection "${collectionName}" is ready in the database at ${dbPath}`);
-      return collection; // Return the collection object to interact with it
-  
     } catch (error) {
-      console.error("Error initializing ChromaDB:", error);
-      throw new Error("Failed to initialize ChromaDB.");
+      console.error("Error initializing pineeconeDB:", error);
+      throw new Error("Failed to initialize PineconeDB.");
     }
 }   
 
