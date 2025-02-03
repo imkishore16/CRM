@@ -8,9 +8,9 @@ import { type ThemeProviderProps } from "next-themes/dist/types";
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
               <SessionProvider>
-                <SocketContextProvider>
+                {/* <SocketContextProvider> */}
                   {children}
-                  </SocketContextProvider>
+                  {/* </SocketContextProvider> */}
               </SessionProvider>
   );
 }

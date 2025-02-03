@@ -3,45 +3,75 @@ import * as path from "path";
 import { NextRequest,NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import { readFileContent } from '@/lib/serverUtils';
 import { Index, Pinecone } from "@pinecone-database/pinecone";
 import { HfInference } from "@huggingface/inference";
 
+import { Buffer } from "buffer";
+import * as XLSX from "xlsx";
+import * as mammoth from "mammoth";
+
+import pdfParse from 'pdf-parse';
+
+export const runtime = 'nodejs' 
+
+
 export async function POST(req: NextRequest) {
-    
-    console.log("embed post function")
-    const formData = await req.formData();
-    const userId = formData.get('userId') as string;
-    const subFolder = formData.get('subFolder') as string;
-    const files = formData.getAll('files') as File[];
+    try {
+        const formData = await req.formData();
+        const userId = formData.get('userId') as string;
+        const subFolder = formData.get('subFolder') as string;
+        const files = formData.getAll('files') as File[];
 
-    console.log(files)
+        console.log("Received files:", files.map(f => f.name));
 
-    if (!userId || !subFolder || files.length === 0) {
+        if (!userId || !subFolder || files.length === 0) {
+            return NextResponse.json(
+                { message: "Missing required fields or files" },
+                { status: 400 }
+            );
+        }
+
+        const indexName = subFolder + userId;
+        const index = await initializePineConeDB(indexName);
+
+        for (const file of files) {
+            try {
+                const content = await readFileContent(file);
+                console.log(`Successfully read file ${file.name}, content length: ${content.length}`);
+                const result = await fileToEmbeddings(file, index);
+                if (!result.success) {
+                    console.error(`Failed to process file ${file.name}:`, result.message);
+                    return NextResponse.json(
+                        { message: result.message },
+                        { status: 500 }
+                    );
+                }
+            } catch (error) {
+                console.error(`Error processing file ${file.name}:`, error);
+                return NextResponse.json(
+                    { message: `Error processing file ${file.name}: ${error}` },
+                    { status: 500 }
+                );
+            }
+        }
+
         return NextResponse.json(
-            { message: "Missing required fields or files" },
-            { status: 400 }
+            { message: "Files uploaded successfully" },
+            { status: 200 }
+        );
+    } catch (error: any) {
+        console.error("Error in POST handler:", error);
+        return NextResponse.json(
+            { message: `Error processing files: ${error.message}` },
+            { status: 500 }
         );
     }
-    console.log("initializing chromdb")
-    const dbPath=path.join(process.cwd(),"storage")
-    console.log(dbPath)
-    const index = await initializePineConeDB(subFolder,dbPath)
-    for (const file of files) {
-        fileToEmbeddings(file,index)
-    }
-    return NextResponse.json(
-        { 
-          message: "Files uploaded successfully", 
-        },
-        { status: 200 }
-      );
 }
 
 
-async function initializePineConeDB(indexName: string, dbPath: string) {
+async function initializePineConeDB(indexName: string) {
     try {
-      const pc = new Pinecone({apiKey:process.env.PINE_CONE_API_KEY??""})
+      const pc = new Pinecone({apiKey:process.env.PINECONE_API_KEY??""})
       const indexList = await pc.listIndexes();
       let indexExists = false;
       indexList.indexes?.forEach(index => {
@@ -50,10 +80,9 @@ async function initializePineConeDB(indexName: string, dbPath: string) {
           }
         });
         if(indexExists){
-          return pc.Index(indexName)
+            return pc.index(indexName) 
         }
 
-      console.log("after return")
       await pc.createIndex({
           name: indexName,
           dimension: 1024,
@@ -69,26 +98,19 @@ async function initializePineConeDB(indexName: string, dbPath: string) {
       return pc.index(indexName);
 
     } catch (error) {
-      console.error("Error initializing pineeconeDB:", error);
+      console.error("Error initializing pineconeDB:", error);
       throw new Error("Failed to initialize PineconeDB.");
     }
 }   
 
-type EmbeddingResult = {
-  success: boolean;
-  message: string;
-  index?: any;
-};
 
-async function fileToEmbeddings(file: File ,index:any): Promise<EmbeddingResult> {
+async function fileToEmbeddings(file: File, index: any): Promise<any> {
     try {
-       
-
-        const fileContent= await readFileContent(file)
+        console.log(file);
+        const fileContent = await readFileContent(file);
         const chunkSize = 500; // Adjust based on the model's token limit
         const chunks = fileContent.match(new RegExp(`.{1,${chunkSize}}`, "g")) || [];
 
-        // Initialize Hugging Face Inference API for embedding
         const hf = new HfInference(process.env.HUGGINGFACE_API_KEY); 
 
         // Generate embeddings for each chunk
@@ -106,29 +128,87 @@ async function fileToEmbeddings(file: File ,index:any): Promise<EmbeddingResult>
             }
         }
   
-        // Add the embeddings to the Chroma collection
-        const ids = chunks.map((_, index) => `$_chunk_${index}`);
-        await index.add({
-            ids,
-            embeddings,
-            metadatas: chunks.map((chunk, index) => ({
-            chunk: index + 1,
-            //   source: file,
-            })),
-            documents: chunks,
+        const ids = chunks.map((_, index) => `chunk_${index}`);
+        await index.upsert({  // Changed from add to upsert
+            vectors: {
+                ids,
+                embeddings,
+                metadatas: chunks.map((chunk, index) => ({
+                    chunk: index + 1,
+                })),
+                documents: chunks,
+            }
         });
+
         return {
             success: true,
-            message: "Embeddings successfully created and stored in Chroma.",
-            index,
+            message: "Embeddings successfully created and stored in Pinecone.",
         };
-        } 
-    catch (error: any) {
-        return { success: false, message: `Error: ${error.message}` };
+    } catch (error: any) {
+        return { 
+            success: false, 
+            message: `Error: ${error.message}` 
+        };
     }
 }
 
 
+
+type SupportedFileType = "pdf"  | "txt";
+async function readFileContent(file: File): Promise<string> {
+    try {
+        console.log("Reading file content:", file.name);
+
+        const fileExtension = file.name.includes(".")
+            ? (file.name.split(".").pop()?.toLowerCase() as SupportedFileType)
+            : null;
+
+        if (!fileExtension || !["pdf", "txt"].includes(fileExtension)) {
+            throw new Error(`Unsupported file type: ${file.name}`);
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+
+        switch (fileExtension) {
+            case "pdf":
+                try {
+                    console.log("Starting PDF parse...");
+                    const pdfBuffer = await file.arrayBuffer();
+                    console.log("PDF buffer created, size:", pdfBuffer.byteLength);
+                    
+                    const buffer = Buffer.from(pdfBuffer);
+                    console.log("Buffer created, size:", buffer.length);
+                    
+                    const data = await pdfParse(buffer);
+                    console.log("PDF parsed successfully, text length:", data.text.length);
+                    
+                    return data.text;
+                } catch (error) {
+                    console.error('Error parsing PDF:', error);
+                    
+                    throw new Error(`Failed to parse PDF: ${error}`);
+                } 
+
+            case "txt":
+                return await file.text();
+
+            default:
+                throw new Error(`Unsupported file type: ${fileExtension}`);
+        }
+    } catch (error) {
+        console.error("Error in readFileContent:", error);
+        throw error;
+    }
+}
+
+export async function GET(req: NextRequest) {
+    return NextResponse.json(
+        { 
+          message: "Files uploaded successfully", 
+        },
+        { status: 200 }
+    );
+}
 
 // -----------------------------------------
 
@@ -150,66 +230,3 @@ async function fileToEmbeddings(file: File ,index:any): Promise<EmbeddingResult>
 
 
 
-
-
-
-
-// type EmbeddingResult = {
-//   success: boolean;
-//   message: string;
-//   collection?: Collection;
-// };
-
-// async function fileToEmbeddingsLocalDB(
-//   filePath: string,
-//   collectionName: string,
-//   dbPath: string // Path to the folder where the ChromaDB instance will be stored
-// ): Promise<EmbeddingResult> {
-//   try {
-//     // Initialize local ChromaDB instance
-//     const chroma = new ChromaClient({ path: dbPath });
-
-//     // Connect to the collection or create it if it doesn't exist
-//     const collection = await chroma.getOrCreateCollection({
-//       name: collectionName,
-//     });
-
-//     // Read the file content
-//     const fileContent = fs.readFileSync(filePath, "utf-8");
-//     if (!fileContent) {
-//       return { success: false, message: "File is empty or unreadable." };
-//     }
-
-//     // Split the file content into manageable chunks
-//     const chunkSize = 500; // Adjust based on the model's token limit
-//     const chunks = fileContent.match(new RegExp(`.{1,${chunkSize}}`, "g")) || [];
-
-//     // Initialize SentenceTransformer
-//     const transformer = await SentenceTransformer.create(
-//       "sentence-transformers/all-MiniLM-L6-v2"
-//     );
-
-//     // Generate embeddings for each chunk
-//     const embeddings = await transformer.embed(chunks);
-
-//     // Add embeddings to the Chroma collection
-//     const ids = chunks.map((_, index) => `${filePath}_chunk_${index}`);
-//     await collection.add({
-//       ids,
-//       embeddings,
-//       metadatas: chunks.map((chunk, index) => ({
-//         chunk: index + 1,
-//         source: filePath,
-//       })),
-//       documents: chunks,
-//     });
-
-//     return {
-//       success: true,
-//       message: "Embeddings successfully created and stored in local ChromaDB.",
-//       collection,
-//     };
-//   } catch (error: any) {
-//     return { success: false, message: `Error: ${error.message}` };
-//   }
-// }

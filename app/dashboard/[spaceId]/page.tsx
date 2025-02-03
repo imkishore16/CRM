@@ -15,8 +15,8 @@ type Props = {
   params: { spaceId: number };
 };
 
-export default async function Component({params}:Props) {
-  const spaceId = await params.spaceId;
+export default function Component({params}:Props) {
+  const spaceId = params.spaceId;
   const router = useRouter(); 
   const [creatorId,setCreatorId]=useState<Number | null>(null);
   const [loading, setLoading] = useState(true);

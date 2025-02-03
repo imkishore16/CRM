@@ -76,11 +76,6 @@ export default function UploadDataForm({
         body: formData,
       });
       
-      // const res = await fetch(`/api/embed`, {
-      //   method: "POST",
-      //   body: formData,
-      // });
-      
       if (response.ok) {
         enqueueToast("success", "Files uploaded successfully!");
         setSelectedFiles([]); 
