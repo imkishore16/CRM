@@ -7,9 +7,6 @@ import { Index, Pinecone } from "@pinecone-database/pinecone";
 import { HfInference } from "@huggingface/inference";
 
 import { Buffer } from "buffer";
-import * as XLSX from "xlsx";
-import * as mammoth from "mammoth";
-
 import pdfParse from 'pdf-parse';
 
 export const runtime = 'nodejs' 
@@ -120,15 +117,19 @@ async function fileToEmbeddings(file: File, index: any): Promise<any> {
                 model: "sentence-transformers/all-MiniLM-L6-v2",
                 inputs: chunk,
             });
+            console.log("response" , response)
 
-            if (Array.isArray(response) && Array.isArray(response[0])) {
-                embeddings.push(response[0] as number[]);
+            if (Array.isArray(response)) {
+                embeddings.push(response as number[]);
+                console.log("chunck embedded")
             } else {
                 throw new Error("Unexpected response format from embedding model.");
             }
         }
-  
+        console.log(embeddings)
         const ids = chunks.map((_, index) => `chunk_${index}`);
+        console.log(ids)
+
         await index.upsert({  // Changed from add to upsert
             vectors: {
                 ids,
@@ -180,6 +181,7 @@ async function readFileContent(file: File): Promise<string> {
                     console.log("Buffer created, size:", buffer.length);
                     
                     const data = await pdfParse(buffer);
+                    console.log(data)
                     console.log("PDF parsed successfully, text length:", data.text.length);
                     
                     return data.text;

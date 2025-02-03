@@ -36,6 +36,7 @@
     "next-app": "file:",
     "next-auth": "^4.24.7",
     "next-themes": "^0.3.0",
+    "pdf-parse": "^1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18",
     "react-h5-audio-player": "^3.9.3",
