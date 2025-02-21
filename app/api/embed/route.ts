@@ -5,6 +5,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { Index, Pinecone } from "@pinecone-database/pinecone";
 import { HfInference } from "@huggingface/inference";
+import PDFParser from "pdf2json";
+import pdf from "pdf-parse";
+import embeddingModel from "@/client/embeddingModel";
 
 import { Buffer } from "buffer";
 import pdfParse from 'pdf-parse';
@@ -110,6 +113,9 @@ async function fileToEmbeddings(file: File, index: any): Promise<any> {
 
         const hf = new HfInference(process.env.HUGGINGFACE_API_KEY); 
 
+        //use inbuilt method to embed all chucks
+        const embeddedData = embeddingModel.embedDocuments(chunks)
+        
         // Generate embeddings for each chunk
         const embeddings: number[][] = [];
         for (const chunk of chunks) {
@@ -117,7 +123,6 @@ async function fileToEmbeddings(file: File, index: any): Promise<any> {
                 model: "sentence-transformers/all-MiniLM-L6-v2",
                 inputs: chunk,
             });
-            console.log("response" , response)
 
             if (Array.isArray(response)) {
                 embeddings.push(response as number[]);
@@ -126,21 +131,26 @@ async function fileToEmbeddings(file: File, index: any): Promise<any> {
                 throw new Error("Unexpected response format from embedding model.");
             }
         }
+        console.log("embeddedData")
+        console.log(embeddedData)
+        console.log("embeddings")
         console.log(embeddings)
+        
         const ids = chunks.map((_, index) => `chunk_${index}`);
         console.log(ids)
-
-        await index.upsert({  // Changed from add to upsert
-            vectors: {
-                ids,
-                embeddings,
-                metadatas: chunks.map((chunk, index) => ({
+        console.log(index)
+        console.log("going to upsert ")
+        await index.upsert({
+            vectors: ids.map((id, index) => ({
+                id, 
+                values: embeddings[index], 
+                metadata: {
                     chunk: index + 1,
-                })),
-                documents: chunks,
-            }
+                    text: chunks[index], // Optionally store the text chunk
+                }
+            })),
         });
-
+        
         return {
             success: true,
             message: "Embeddings successfully created and stored in Pinecone.",
@@ -155,7 +165,7 @@ async function fileToEmbeddings(file: File, index: any): Promise<any> {
 
 
 
-type SupportedFileType = "pdf"  | "txt";
+type SupportedFileType = "pdf"  | "txt" ;
 async function readFileContent(file: File): Promise<string> {
     try {
         console.log("Reading file content:", file.name);
@@ -190,7 +200,42 @@ async function readFileContent(file: File): Promise<string> {
                     
                     throw new Error(`Failed to parse PDF: ${error}`);
                 } 
+            // case "pdf2":
+            //     const pdfParser = new PDFParser();
+            //     pdfParser.on("pdfParser_dataError", (errData: any) =>
+            //         console.error(errData.parserError)
+            //     );
+            //     pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
+            //         console.log(pdfData);
+            //         return pdfData
+            //     });
 
+            //     pdfParser.loadPDF(file);
+            // case "pdf3":
+            //     file.arrayBuffer().then((dataBuffer) => {
+            //         pdf(dataBuffer).then(function (data) {
+            //           // Process the PDF data here
+            //           console.log(data);
+            //         }).catch((err) => {
+            //           console.error('Error processing PDF:', err);
+            //         });
+            //       }).catch((err) => {
+            //         console.error('Error reading file as ArrayBuffer:', err);
+            //       });
+
+                // pdf(dataBuffer).then(function (data) {
+
+                // console.log(data.numpages);
+                // // number of rendered pages
+                // console.log(data.numrender);
+                // // PDF info
+                // console.log(data.info);
+                // // PDF metadata
+                // console.log(data.metadata);
+                // // PDF.js version
+                // console.log(data.version);
+                // console.log(data.text);
+                // })
             case "txt":
                 return await file.text();
 
