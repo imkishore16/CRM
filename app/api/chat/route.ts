@@ -10,12 +10,16 @@ import { RetrievalQAChain } from "langchain/chains";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 
-const INDEX_NAME = "your_index_name"; // Ensure this is set properly
 
+// this is the chat api , the bread and butter for the conversation to take place 
+/*
+For a conversation to take place , the user will need to recienve the respone from thr LLm which is the respone vvarialbe
+the llm needs to know the user , so that it can fetch the index and past conversation */
 export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
         const query = formData.get("query") as string;
+        const phoneNumber = formData.get("From") as string;  // Twilio sends sender's number as "From"
         if (!query) {
             return NextResponse.json({ error: "Query is required" }, { status: 400 });
         }

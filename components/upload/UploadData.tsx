@@ -8,7 +8,7 @@ type Props = {
   loading: boolean;
   enqueueToast: (type: "error" | "success", message: string) => void;
   spaceId : Number;
-  subFolder :string
+  index :string
 };
 
 export default function UploadDataForm({
@@ -16,9 +16,8 @@ export default function UploadDataForm({
   setLoading,
   loading,
   spaceId,
-  subFolder
+  index
 }: Props) {
-  const [productData,setProductData] = useState("")
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const user = useSession().data?.user;
 
@@ -69,7 +68,7 @@ export default function UploadDataForm({
       const formData = new FormData();
       selectedFiles.forEach((file) => formData.append("files", file));
       formData.append("userId", user.id);
-      formData.append("subFolder", subFolder);
+      formData.append("subFolder", index);
       console.log("Called upload api")
       const response = await fetch(`/api/embed`, {
         method: "POST",

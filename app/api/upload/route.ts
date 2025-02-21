@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     try {
       const formData = await req.formData();
       const userId = formData.get('userId') as string;
-      const subFolder = formData.get('subFolder') as string;
+      const subFolder = formData.get('index') as string;
       const files = formData.getAll('files') as File[];
         console.log(files.length)
       if (!userId || !subFolder || files.length === 0) {

@@ -8,7 +8,7 @@ import { HfInference } from "@huggingface/inference";
 import PDFParser from "pdf2json";
 import pdf from "pdf-parse";
 import embeddingModel from "@/client/embeddingModel";
-
+import pc from "@/client/pinecone";
 import { Buffer } from "buffer";
 import pdfParse from 'pdf-parse';
 
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
         const userId = formData.get('userId') as string;
-        const subFolder = formData.get('subFolder') as string;
+        const subFolder = formData.get('index') as string;
         const files = formData.getAll('files') as File[];
 
         console.log("Received files:", files.map(f => f.name));
@@ -32,28 +32,35 @@ export async function POST(req: NextRequest) {
         }
 
         const indexName = subFolder + userId;
-        const index = await initializePineConeDB(indexName);
-
-        for (const file of files) {
-            try {
-                const content = await readFileContent(file);
-                console.log(`Successfully read file ${file.name}, content length: ${content.length}`);
-                const result = await fileToEmbeddings(file, index);
-                if (!result.success) {
-                    console.error(`Failed to process file ${file.name}:`, result.message);
+        const index = pc.index(indexName)
+        if (subFolder==="productdata")
+        {
+            for (const file of files) {
+                try {
+                    const content = await readFileContent(file);
+                    console.log(`Successfully read file ${file.name}, content length: ${content.length}`);
+                    const result = await fileToEmbeddings(file, index);
+                    if (!result.success) {
+                        console.error(`Failed to process file ${file.name}:`, result.message);
+                        return NextResponse.json(
+                            { message: result.message },
+                            { status: 500 }
+                        );
+                    }
+                } catch (error) {
+                    console.error(`Error processing file ${file.name}:`, error);
                     return NextResponse.json(
-                        { message: result.message },
+                        { message: `Error processing file ${file.name}: ${error}` },
                         { status: 500 }
                     );
                 }
-            } catch (error) {
-                console.error(`Error processing file ${file.name}:`, error);
-                return NextResponse.json(
-                    { message: `Error processing file ${file.name}: ${error}` },
-                    { status: 500 }
-                );
             }
         }
+        else  // store customer data properly
+        {
+            
+        }
+        
 
         return NextResponse.json(
             { message: "Files uploaded successfully" },
@@ -69,39 +76,6 @@ export async function POST(req: NextRequest) {
 }
 
 
-async function initializePineConeDB(indexName: string) {
-    try {
-      const pc = new Pinecone({apiKey:process.env.PINECONE_API_KEY??""})
-      const indexList = await pc.listIndexes();
-      let indexExists = false;
-      indexList.indexes?.forEach(index => {
-        if (index.name === indexName) {
-          indexExists = true;
-          }
-        });
-        if(indexExists){
-            return pc.index(indexName) 
-        }
-
-      await pc.createIndex({
-          name: indexName,
-          dimension: 1024,
-          metric: 'cosine',
-          spec: { 
-              serverless: { 
-              cloud: 'aws', 
-              region: 'us-east-1' 
-              }
-          } 
-      });
-      await pc.index(indexName).describeIndexStats();
-      return pc.index(indexName);
-
-    } catch (error) {
-      console.error("Error initializing pineconeDB:", error);
-      throw new Error("Failed to initialize PineconeDB.");
-    }
-}   
 
 
 async function fileToEmbeddings(file: File, index: any): Promise<any> {

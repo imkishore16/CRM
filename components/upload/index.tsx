@@ -38,7 +38,7 @@ export default function Upload({
                 loading={loading}
                 setLoading={setLoading}
                 spaceId={spaceId}
-                subFolder="productdata"
+                index="productdata"
               />
         </div>
         <div className="flex items-center justify-between mb-4">
@@ -50,7 +50,7 @@ export default function Upload({
                 loading={loading}
                 setLoading={setLoading}
                 spaceId={spaceId}
-                subFolder="customerdata"
+                index="customerdata"
               />
         </div>
         </div>

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { authOptions } from "@/lib/auth-options";
 import { getServerSession } from "next-auth";
+import initializePineConeDB from "@/lib/initializeIndex";
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,6 +33,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const spaceId=space.id
+    //when a user creates a space the pinecone indices must be created , product data , conversation data etcc
+    const productIndexName = "productdata" + spaceId;
+    await initializePineConeDB(productIndexName)
+    const conversationIndexName = "conversationdata" + spaceId;
+    await initializePineConeDB(conversationIndexName)
     
     return NextResponse.json(
       { success: true, message: "Space created successfully", space },
@@ -52,8 +60,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-
 
 
 export async function GET(req: NextRequest) {

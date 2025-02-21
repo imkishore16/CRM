@@ -1,0 +1,10 @@
+Pinecone DB:
+
+index 
+Namespaces - namespace is a logical separation inside an index
+Metadata
+
+
+
+Pinecone does not provide an API to list all namespaces in an index.
+You must track them separately in a database or metadata store.
