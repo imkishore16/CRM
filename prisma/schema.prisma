@@ -37,6 +37,14 @@ model Space{
 //each space takes in a some type of document that consists of the user data and the mobile numbers and names are stored in the database
 
 
+//a tertiary table to store all customers (ie mobile numbner) of a merchant
+
+model SpaceCustomer{
+  id Int @id @default(autoincrement())
+  spaceId Int 
+  mobileNumber String
+}
+
 enum Role {
   USER
   ADMIN

@@ -3,7 +3,7 @@ import pc from "@/client/pinecone";
 import { OpenAI } from "@langchain/openai";
 import llm from "@/client/llm";
 import embeddingModel from "@/client/embeddingModel";
-
+import prisma from "@/lib/db";
 import { HuggingFaceInference } from "@langchain/community/llms/hf"; // For Hugging Face LLM
 import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf"; // For Hugging Face embeddings
 import { RetrievalQAChain } from "langchain/chains";
@@ -19,12 +19,17 @@ export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
         const query = formData.get("query") as string;
-        const phoneNumber = formData.get("From") as string;  // Twilio sends sender's number as "From"
+        const mobileNumber = formData.get("From") as string;  // Twilio sends sender's number as "From"
         if (!query) {
             return NextResponse.json({ error: "Query is required" }, { status: 400 });
         }
 
-        const relevantDocs = await similaritySearch(query, INDEX_NAME);
+        const spaceId = await prisma.spaceCustomer.findUnique({
+            where: { mobileNumber: mobileNumber },
+            select: { spaceId: true },
+        });
+        const indexName="productdata"+spaceId;
+        const relevantDocs = await similaritySearch(query, indexName);
         
         const response = await generateResponse(query, relevantDocs);
 

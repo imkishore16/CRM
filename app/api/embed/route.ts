@@ -11,27 +11,27 @@ import embeddingModel from "@/client/embeddingModel";
 import pc from "@/client/pinecone";
 import { Buffer } from "buffer";
 import pdfParse from 'pdf-parse';
-
+import prisma from "@/lib/db";
 export const runtime = 'nodejs' 
 
 
 export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
-        const userId = formData.get('userId') as string;
+        const spaceId = formData.get('spaceId') as string;
         const subFolder = formData.get('index') as string;
         const files = formData.getAll('files') as File[];
 
         console.log("Received files:", files.map(f => f.name));
 
-        if (!userId || !subFolder || files.length === 0) {
+        if (!spaceId || !subFolder || files.length === 0) {
             return NextResponse.json(
                 { message: "Missing required fields or files" },
                 { status: 400 }
             );
         }
 
-        const indexName = subFolder + userId;
+        const indexName = subFolder + spaceId;
         const index = pc.index(indexName)
         if (subFolder==="productdata")
         {
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
                 try {
                     const content = await readFileContent(file);
                     console.log(`Successfully read file ${file.name}, content length: ${content.length}`);
-                    const result = await fileToEmbeddings(file, index);
+                    const result = await embedProductData(file, index);
                     if (!result.success) {
                         console.error(`Failed to process file ${file.name}:`, result.message);
                         return NextResponse.json(
@@ -58,7 +58,24 @@ export async function POST(req: NextRequest) {
         }
         else  // store customer data properly
         {
-            
+            for (const file of files) {
+                try {
+                    const result = await embedCustomerData(file,index,spaceId);
+                    if (!result.success) {
+                        console.error(`Failed to process file ${file.name}:`, result.message);
+                        return NextResponse.json(
+                            { message: result.message },
+                            { status: 500 }
+                        );
+                    }
+                } catch (error) {
+                    console.error(`Error processing file ${file.name}:`, error);
+                    return NextResponse.json(
+                        { message: `Error processing file ${file.name}: ${error}` },
+                        { status: 500 }
+                    );
+                }
+            }
         }
         
 
@@ -76,9 +93,7 @@ export async function POST(req: NextRequest) {
 }
 
 
-
-
-async function fileToEmbeddings(file: File, index: any): Promise<any> {
+async function embedProductData(file: File, index: any): Promise<any> {
     try {
         console.log(file);
         const fileContent = await readFileContent(file);
@@ -113,7 +128,7 @@ async function fileToEmbeddings(file: File, index: any): Promise<any> {
         const ids = chunks.map((_, index) => `chunk_${index}`);
         console.log(ids)
         console.log(index)
-        console.log("going to upsert ")
+        console.log("going to upsert")
         await index.upsert({
             vectors: ids.map((id, index) => ({
                 id, 
@@ -137,6 +152,53 @@ async function fileToEmbeddings(file: File, index: any): Promise<any> {
     }
 }
 
+
+async function embedCustomerData(file: File, index: any,spaceId : string) {
+    try{
+        const pdfData = await readFileContent(file);
+    
+        // Regex to match "MobileNumber: User Data"
+        const regex = /(\d{10})\s*:\s*(.+?)(?=\n\d{10}\s*:|$)/;
+        const matches = [...pdfData.matchAll(regex)];
+    
+        for (const match of matches) {
+        const mobileNumber = match[1];
+        const userData = match[2];
+    
+        console.log(`Found: ${mobileNumber} -> ${userData}`);
+    
+        const embedding = await embeddingModel.embedQuery(userData);
+        
+        //   await prisma.spaceCustomer.create({
+        //     data: {
+        //       spaceId: spaceId,
+        //       mobileNumber: mobileNumber,
+        //     },
+        //   });
+
+        // Store in Pinecone
+        await index.upsert([
+            {
+            id: mobileNumber,
+            values: embedding,
+            metadata: { mobile: mobileNumber, data: userData },
+            },
+        ]);
+        }
+        return {
+            success: true,
+            message: "Embeddings successfully created and stored in Pinecone.",
+        };
+    }
+    catch (error: any) {
+        return { 
+            success: false, 
+            message: `Error: ${error.message}` 
+        };
+    }
+    
+  }
+  
 
 
 type SupportedFileType = "pdf"  | "txt" ;
@@ -221,33 +283,6 @@ async function readFileContent(file: File): Promise<string> {
         throw error;
     }
 }
-
-export async function GET(req: NextRequest) {
-    return NextResponse.json(
-        { 
-          message: "Files uploaded successfully", 
-        },
-        { status: 200 }
-    );
-}
-
-// -----------------------------------------
-
-
-
-
-
-
-//     // Initialize embedding model
-//     const embeddings = new HuggingFaceTransformersEmbeddings({
-//       modelName: 'all-MiniLM-L6-v2'
-//     });
-
-//   await collection.add({
-//     ids: ['doc1'],
-//     documents: ['Your document text here'],
-//     metadatas: [{ source: 'initial_document' }]
-//   });
 
 
 
