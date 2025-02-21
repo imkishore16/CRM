@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Query is required" }, { status: 400 });
         }
 
-        const spaceId = await prisma.spaceCustomer.findUnique({
+        const spaceId = await prisma.spaceCustomer.findFirst({
             where: { mobileNumber: mobileNumber },
             select: { spaceId: true },
         });
