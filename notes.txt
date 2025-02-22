@@ -8,3 +8,16 @@ Metadata
 
 Pinecone does not provide an API to list all namespaces in an index.
 You must track them separately in a database or metadata store.
+
+
+
+
+
+Langchain :
+
+what are chains 
+    The chain in LangChain is a fundamental concept that allows you to compose multiple components (e.g., prompts, models, tools, memory) into a single, reusable pipeline.
+    Chains are designed to simplify the process of building complex workflows, such as Retrieval-Augmented Generation (RAG), conversational agents, or multi-step reasoning systems.
+
+
+What is streaming

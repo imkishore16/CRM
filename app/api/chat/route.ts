@@ -28,10 +28,21 @@ export async function POST(req: NextRequest) {
             where: { mobileNumber: mobileNumber },
             select: { spaceId: true },
         });
-        const indexName="productdata"+spaceId;
-        const relevantDocs = await similaritySearch(query, indexName);
+        const productIndexName="productdata"+spaceId;
+        const productIndex = pc.index(productIndexName);
+        const customerIndexName="customerdata"+spaceId;
+        const customerIndex = pc.index(customerIndexName);
+
+
+        const pastConversations = await fetchConversationHistory(mobileNumber,customerIndex);
+
+        const summarizedHistory = await summarizeConversation(pastConversations);
+
+        const relevantDocs = await similaritySearch(query, productIndex);
         
-        const response = await generateResponse(query, relevantDocs);
+        const response = await generateResponse(query, relevantDocs,summarizedHistory );
+        
+        await saveConversation(mobileNumber, query, response,customerIndex);
 
         return NextResponse.json({ message: response }, { status: 200 });
     } catch (error) {
@@ -40,33 +51,64 @@ export async function POST(req: NextRequest) {
     }
 }
 
-async function chain(query: string) {
+
+async function saveConversation(mobileNumber: string, query: string, response: string, index : any): Promise<void> {
     try {
-        const prompt = ChatPromptTemplate.fromTemplate("Tell me a joke about {query}");
-        const parser = new StringOutputParser();
-        const chain = prompt.pipe(llm).pipe(parser);
-
-        const stream = await chain.stream({ query });
-
-        let result = "";
-        for await (const chunk of stream) {
-            result += chunk;
-        }
-
-        return result;
+      
+  
+      // Generate embeddings for the conversation
+      const embedding = await embeddingModel.embedQuery(query);
+  
+      // Save the conversation with metadata
+      await index.namespace(mobileNumber).upsert([
+        {
+          id: `conv_${Date.now()}`, // Unique ID for the conversation
+          values: embedding,
+          metadata: {
+            user_query: query,
+            llm_reply: response,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      ]);
     } catch (error) {
-        console.error("Error generating response:", error);
-        return "Failed to generate a response.";
+      console.error("Error saving conversation:", error);
     }
 }
 
-async function similaritySearch(query: string, indexName: string) {
+async function fetchConversationHistory(mobileNumber: string , index:any): Promise<string[]> {
     try {
-        const index = pc.index(indexName);
+  
+      // Fetch all conversations for the user (namespace = mobileNumber)
+      const queryResponse = await index.namespace(mobileNumber).query({
+        topK: 100, // Fetch all conversations (adjust as needed)
+        includeMetadata: true,
+      });
+  
+      if (!queryResponse.matches || queryResponse.matches.length === 0) {
+        return [];
+      }
+  
+      // Combine the text from the conversations
+      const conversations = queryResponse.matches.map((match:any) => {
+        const metadata = match.metadata;
+        return `User Query: ${metadata.user_query}\nLLM Reply: ${metadata.llm_reply}`;
+      });
+  
+      return conversations;
+    } catch (error) {
+      console.error("Error fetching conversation history:", error);
+      return [];
+    }
+}
+
+
+async function similaritySearch(query: string, index:any) {
+    try {
 
         const queryEmbedding  = await embeddingModel.embedQuery(query)
 
-        const queryResponse = await index.namespace(indexName).query({
+        const queryResponse = await index.namespace("productdata").query({
             vector: queryEmbedding ,
             topK: 3,
             includeValues: true,
@@ -76,7 +118,7 @@ async function similaritySearch(query: string, indexName: string) {
             return "No relevant results found.";
         }
         const relevantTexts = queryResponse.matches
-            .map((match) => match.metadata?.text || "")
+            .map((match:any) => match.metadata?.text || "")
             .join("\n");
 
         return relevantTexts;
@@ -88,14 +130,25 @@ async function similaritySearch(query: string, indexName: string) {
 }
 
 
-async function generateResponse(query: string, context: string): Promise<string> {
+async function generateResponse(query: string, context: string, history: string): Promise<string> {
     try {
+      // Combine conversation history and context
+      const fullContext = `
+        Conversation History:
+        ${history}
+        
+        Retrieved Context:
+        ${context}
+        
+        Current Query:
+        ${query}
+      `;
+  
       // Create a prompt template for RAG
       const prompt = ChatPromptTemplate.fromTemplate(`
-        You are a helpful assistant. Use the following context to answer the user's question:
+        You are a helpful assistant. Use the following context and conversation history to answer the user's question:
         
-        Context:
-        ${context}
+        {fullContext}
         
         Question:
         {query}
@@ -105,14 +158,14 @@ async function generateResponse(query: string, context: string): Promise<string>
       const chain = prompt.pipe(llm).pipe(new StringOutputParser());
   
       // Generate the response
-      const response = await chain.invoke({ query });
+      const response = await chain.invoke({ fullContext, query });
   
       return response;
     } catch (error) {
       console.error("Error generating response:", error);
       return "Failed to generate a response.";
     }
-}
+  }
 
 async function summarizeConversation(history: string[]): Promise<string> {
     const summarizationModel = new HuggingFaceInference({

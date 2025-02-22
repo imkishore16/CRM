@@ -129,7 +129,8 @@ async function embedProductData(file: File, index: any): Promise<any> {
         console.log(ids)
         console.log(index)
         console.log("going to upsert")
-        await index.upsert({
+
+        await index.namespace("productdata").upsert({
             vectors: ids.map((id, index) => ({
                 id, 
                 values: embeddings[index], 
