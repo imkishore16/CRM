@@ -7,18 +7,20 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { useRouter } from "next/navigation";
 
 
-
-// in this coponents the first page is the dashboard 
-// and the sidepanel will contain the other pages to upload data / view contents uploaded , chat histories etc etc...
-
 type Props = {
   params: { spaceId: number };
 };
 
 export default function Component({params}:Props) {
-  const spaceId = params.spaceId;
+  const [spaceId, setSpaceId] = useState(-1);
+  useEffect(() => {
+    async function getParams() {
+      const unwrappedParams = await params;
+      setSpaceId(unwrappedParams.spaceId);
+    }
+    getParams();
+  }, [params]);
   const router = useRouter(); 
-  const [creatorId,setCreatorId]=useState<Number | null>(null);
   const [loading, setLoading] = useState(true);
   
   const handleNavigation = (path: string) => {
@@ -27,41 +29,9 @@ export default function Component({params}:Props) {
   
   return (
     <div className="flex">
-      {/* Side Navbar */}
-      <div className="w-64 bg-gray-800 text-white h-screen p-4">
-        <h2 className="text-xl font-bold mb-4">Dashboard</h2>
-        <ul className="space-y-4">
-          <li>
-            <button
-              onClick={() => handleNavigation(`/dashboard/${spaceId}/overview`)} 
-              className="w-full text-left px-4 py-2 rounded hover:bg-gray-700"
-            >
-              Overview
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigation(`/dashboard/${spaceId}/upload`)} 
-              className="w-full text-left px-4 py-2 rounded hover:bg-gray-700"
-            >
-              Upload Data
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigation(`/dashboard/${spaceId}/settings`)} 
-              className="w-full text-left px-4 py-2 rounded hover:bg-gray-700"
-            >
-              Settings
-            </button>
-          </li>
-          
-        </ul>
-      </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 p-8">
-        {/* Render your analytics or based on the route */}
+        <p>Welcome to your dashboard. Here's an overview of your account.</p>
         <div> analytics here </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { Providers, ThemeProvider } from "@/components/provider";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { appBar } from "@/constants/appBar";
+import { Appbar } from "@/components/Appbar";
 const inter = Inter({ subsets: ["latin"] });
 
 type ToasterProps = React.ComponentProps<typeof Toaster>;

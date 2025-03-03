@@ -46,6 +46,15 @@ const nextConfig = {
     experimental: {
       serverComponentsExternalPackages: ["pdf-parse"],
     },
+    images: {
+      remotePatterns: [
+        {
+          protocol: 'https',
+          hostname: 'i.scdn.co',
+        },
+      ],  
+        domains: ['images.unsplash.com','i.ytimg.com'],
+      },
   };
   
   module.exports = nextConfig;

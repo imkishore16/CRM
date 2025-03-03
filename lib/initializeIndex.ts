@@ -16,7 +16,7 @@ async function initializePineConeDB(indexName: string) {
 
       await pc.createIndex({
           name: indexName,
-          dimension: 1024,
+          dimension: 384,
           metric: 'cosine',
           spec: { 
               serverless: { 

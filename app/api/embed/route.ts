@@ -12,6 +12,7 @@ import pc from "@/client/pinecone";
 import { Buffer } from "buffer";
 import pdfParse from 'pdf-parse';
 import prisma from "@/lib/db";
+import { cookies } from "next/headers";
 export const runtime = 'nodejs' 
 
 
@@ -19,12 +20,15 @@ export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
         const spaceId = formData.get('spaceId') as string;
-        const subFolder = formData.get('index') as string;
+        const subFolder = formData.get('indexName') as string;
         const files = formData.getAll('files') as File[];
 
         console.log("Received files:", files.map(f => f.name));
 
         if (!spaceId || !subFolder || files.length === 0) {
+            console.log(formData)
+            console.log( spaceId)
+            console.log( subFolder)
             return NextResponse.json(
                 { message: "Missing required fields or files" },
                 { status: 400 }
@@ -32,7 +36,8 @@ export async function POST(req: NextRequest) {
         }
 
         const indexName = subFolder + spaceId;
-        const index = pc.index(indexName)
+        const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+
         if (subFolder==="productdata")
         {
             for (const file of files) {
@@ -41,7 +46,7 @@ export async function POST(req: NextRequest) {
                     console.log(`Successfully read file ${file.name}, content length: ${content.length}`);
                     const result = await embedProductData(file, index);
                     if (!result.success) {
-                        console.error(`Failed to process file ${file.name}:`, result.message);
+                        console.error(`Failed to process file ${file.name}:`, result);
                         return NextResponse.json(
                             { message: result.message },
                             { status: 500 }
@@ -60,7 +65,7 @@ export async function POST(req: NextRequest) {
         {
             for (const file of files) {
                 try {
-                    const result = await embedCustomerData(file,index,spaceId);
+                    const result = await embedCustomerData(file,index,spaceId,"1");
                     if (!result.success) {
                         console.error(`Failed to process file ${file.name}:`, result.message);
                         return NextResponse.json(
@@ -95,51 +100,37 @@ export async function POST(req: NextRequest) {
 
 async function embedProductData(file: File, index: any): Promise<any> {
     try {
-        console.log(file);
         const fileContent = await readFileContent(file);
-        const chunkSize = 500; // Adjust based on the model's token limit
-        const chunks = fileContent.match(new RegExp(`.{1,${chunkSize}}`, "g")) || [];
-
-        const hf = new HfInference(process.env.HUGGINGFACE_API_KEY); 
-
-        //use inbuilt method to embed all chucks
-        const embeddedData = embeddingModel.embedDocuments(chunks)
-        
-        // Generate embeddings for each chunk
-        const embeddings: number[][] = [];
-        for (const chunk of chunks) {
-            const response = await hf.featureExtraction({
-                model: "sentence-transformers/all-MiniLM-L6-v2",
-                inputs: chunk,
-            });
-
-            if (Array.isArray(response)) {
-                embeddings.push(response as number[]);
-                console.log("chunck embedded")
-            } else {
-                throw new Error("Unexpected response format from embedding model.");
-            }
+        if (!fileContent) {
+            throw new Error("File content is empty or could not be read.");
         }
-        console.log("embeddedData")
-        console.log(embeddedData)
-        console.log("embeddings")
-        console.log(embeddings)
+        
+        const chunkSize = 500; 
+        const overlap = 100; 
+        const chunks = chunkText(fileContent, chunkSize, overlap);
+        if (chunks.length === 0) {
+            throw new Error("No chunks were created from the file content.");
+        }
+
+        const embeddedData = await embeddingModel.embedDocuments(chunks)
         
         const ids = chunks.map((_, index) => `chunk_${index}`);
-        console.log(ids)
-        console.log(index)
-        console.log("going to upsert")
 
-        await index.namespace("productdata").upsert({
-            vectors: ids.map((id, index) => ({
-                id, 
-                values: embeddings[index], 
-                metadata: {
-                    chunk: index + 1,
-                    text: chunks[index], // Optionally store the text chunk
-                }
-            })),
-        });
+        const vectors = ids.map((id, index) => ({
+            id,
+            values: embeddedData[index],
+            metadata: {
+                chunk: index + 1,
+                text: chunks[index],
+            },
+        }));
+        
+        try {
+            await index.namespace("productdata").upsert(vectors); 
+            console.log("Records upserted successfully.");
+        } catch (error) {
+            console.error("Failed to upsert records:", error);
+        }
         
         return {
             success: true,
@@ -154,37 +145,39 @@ async function embedProductData(file: File, index: any): Promise<any> {
 }
 
 
-async function embedCustomerData(file: File, index: any,spaceId : string) {
+async function embedCustomerData(file: File, index: any,spaceId : string,campaignId : string) {
     try{
-        const pdfData = await readFileContent(file);
-    
+        const data = await readFileContent(file);
+        console.log("pdfData : " , data)
         // Regex to match "MobileNumber: User Data"
-        const regex = /(\d{10})\s*:\s*(.+?)(?=\n\d{10}\s*:|$)/;
-        const matches = [...pdfData.matchAll(regex)];
-    
+        const regex = /(\d{10})\s*:\s*([\s\S]+?)(?=\n\d{10}\s*:|$)/g;
+        const matches = [...data.matchAll(regex)];
+        console.log("matches" , matches)
         for (const match of matches) {
-        const mobileNumber = match[1];
-        const userData = match[2];
-    
-        console.log(`Found: ${mobileNumber} -> ${userData}`);
-    
-        const embedding = await embeddingModel.embedQuery(userData);
+            const mobileNumber = match[1];
+            const userData = match[2];
         
-        //   await prisma.spaceCustomer.create({
-        //     data: {
-        //       spaceId: spaceId,
-        //       mobileNumber: mobileNumber,
-        //     },
-        //   });
-
-        // Store in Pinecone
-        await index.upsert([
-            {
-            id: mobileNumber,
-            values: embedding,
-            metadata: { mobile: mobileNumber, data: userData },
+            console.log(`Found: ${mobileNumber} -> ${userData}`);
+        
+            const embedding = await embeddingModel.embedQuery(userData);
+            
+            await prisma.spaceCustomer.create({
+            data: {
+                spaceId: parseInt(spaceId, 10),
+                mobileNumber: mobileNumber,
+                campaignId : parseInt(campaignId, 10),
+                status : false
             },
-        ]);
+            });
+
+            // Store in Pinecone
+            await index.upsert([
+                {
+                id: mobileNumber,
+                values: embedding,
+                metadata: { mobile: mobileNumber, data: userData },
+                },
+            ]);
         }
         return {
             success: true,
@@ -197,10 +190,23 @@ async function embedCustomerData(file: File, index: any,spaceId : string) {
             message: `Error: ${error.message}` 
         };
     }
-    
-  }
+}
   
+function chunkText(text: string, chunkSize: number, overlap: number): string[] {
+const chunks: string[] = [];
+let start = 0;
 
+while (start < text.length) {
+    const end = start + chunkSize;
+    const chunk = text.slice(start, end);
+    chunks.push(chunk);
+
+    // Move the start position forward by (chunkSize - overlap)
+    start += chunkSize - overlap;
+}
+
+return chunks;
+}
 
 type SupportedFileType = "pdf"  | "txt" ;
 async function readFileContent(file: File): Promise<string> {
@@ -222,13 +228,11 @@ async function readFileContent(file: File): Promise<string> {
                 try {
                     console.log("Starting PDF parse...");
                     const pdfBuffer = await file.arrayBuffer();
-                    console.log("PDF buffer created, size:", pdfBuffer.byteLength);
                     
                     const buffer = Buffer.from(pdfBuffer);
-                    console.log("Buffer created, size:", buffer.length);
                     
                     const data = await pdfParse(buffer);
-                    console.log(data)
+                    console.log("ParesedData : ", data.text)
                     console.log("PDF parsed successfully, text length:", data.text.length);
                     
                     return data.text;
@@ -236,7 +240,7 @@ async function readFileContent(file: File): Promise<string> {
                     console.error('Error parsing PDF:', error);
                     
                     throw new Error(`Failed to parse PDF: ${error}`);
-                } 
+                }
             // case "pdf2":
             //     const pdfParser = new PDFParser();
             //     pdfParser.on("pdfParser_dataError", (errData: any) =>

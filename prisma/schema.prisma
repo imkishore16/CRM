@@ -43,6 +43,8 @@ model SpaceCustomer{
   id Int @id @default(autoincrement())
   spaceId Int 
   mobileNumber String
+  campaignId Int
+  status Boolean
 }
 
 enum Role {

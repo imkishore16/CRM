@@ -17,21 +17,27 @@ For a conversation to take place , the user will need to recienve the respone fr
 the llm needs to know the user , so that it can fetch the index and past conversation */
 export async function POST(req: NextRequest) {
     try {
-        const formData = await req.formData();
-        const query = formData.get("query") as string;
-        const mobileNumber = formData.get("From") as string;  // Twilio sends sender's number as "From"
+        const data = await req.json();
+        const query = data.query as string;
+        const mobileNumber = data.From as string;  // Twilio sends sender's number as "From"
+
         if (!query) {
             return NextResponse.json({ error: "Query is required" }, { status: 400 });
+        }
+        if (!mobileNumber) {
+            console.log("no mobile numbner")
+            return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
         }
 
         const spaceId = await prisma.spaceCustomer.findFirst({
             where: { mobileNumber: mobileNumber },
             select: { spaceId: true },
         });
+        
         const productIndexName="productdata"+spaceId;
-        const productIndex = pc.index(productIndexName);
+        const productIndex = pc.index(productIndexName , `https://${productIndexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
         const customerIndexName="customerdata"+spaceId;
-        const customerIndex = pc.index(customerIndexName);
+        const customerIndex = pc.index(customerIndexName , `https://${customerIndexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
 
 
         const pastConversations = await fetchConversationHistory(mobileNumber,customerIndex);
@@ -43,7 +49,6 @@ export async function POST(req: NextRequest) {
         const response = await generateResponse(query, relevantDocs,summarizedHistory );
         
         await saveConversation(mobileNumber, query, response,customerIndex);
-
         return NextResponse.json({ message: response }, { status: 200 });
     } catch (error) {
         console.error("Error processing request:", error);
@@ -169,7 +174,7 @@ async function generateResponse(query: string, context: string, history: string)
 
 async function summarizeConversation(history: string[]): Promise<string> {
     const summarizationModel = new HuggingFaceInference({
-        // apiKey: HF_API_KEY,
+        apiKey: process.env.HUGGINGFACE_API_KEY,
         model: "facebook/bart-large-cnn",
     });
 

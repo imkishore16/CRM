@@ -8,7 +8,7 @@ type Props = {
   loading: boolean;
   enqueueToast: (type: "error" | "success", message: string) => void;
   spaceId : Number;
-  index :string
+  indexName :string
 };
 
 export default function UploadDataForm({
@@ -16,7 +16,7 @@ export default function UploadDataForm({
   setLoading,
   loading,
   spaceId,
-  index
+  indexName
 }: Props) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const user = useSession().data?.user;
@@ -25,7 +25,7 @@ export default function UploadDataForm({
     const files = e.target.files;
     if (files) {
       const fileArray = Array.from(files);
-      const validExtensions = ["pdf", "csv", "xlsx", "xls"];
+      const validExtensions = ["pdf", "csv", "xlsx", "xls","txt"];
       const validFiles = fileArray.filter((file) =>
         validExtensions.includes(file.name.split(".").pop()?.toLowerCase() || "")
       );
@@ -67,8 +67,8 @@ export default function UploadDataForm({
     try {
       const formData = new FormData();
       selectedFiles.forEach((file) => formData.append("files", file));
-      formData.append("userId", user.id);
-      formData.append("subFolder", index);
+      formData.append("spaceId", spaceId.toString());
+      formData.append("indexName", indexName);
       console.log("Called upload api")
       const response = await fetch(`/api/embed`, {
         method: "POST",
@@ -120,7 +120,7 @@ export default function UploadDataForm({
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="file"
-          accept=".pdf,.csv,.xlsx,.xls"
+          accept=".pdf,.csv,.xlsx,.xls,.txt"
           multiple
           onChange={handleFileChange}
           className="w-full p-2 border rounded"

@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
     //when a user creates a space the pinecone indices must be created , product data , conversation data etcc
     const productIndexName = "productdata" + spaceId;
     await initializePineConeDB(productIndexName)
-    const conversationIndexName = "conversationdata" + spaceId;
-    await initializePineConeDB(conversationIndexName)
+    const customerIndexName = "customerdata" + spaceId;
+    await initializePineConeDB(customerIndexName)
     
     return NextResponse.json(
       { success: true, message: "Space created successfully", space },

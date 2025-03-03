@@ -16,7 +16,7 @@ import SpacesCard from "./SpacesCard";
 interface Space {
   endTime?: Date | null;
   hostId: string;
-  id: string;
+  id: Number;
   isActive: boolean;
   name: string;
   startTime: Date | null;
@@ -131,7 +131,7 @@ export default function HomeView() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-gray-900 to-black text-gray-200">
-      <Appbar />
+
       <div className="flex flex-grow flex-col items-center px-4 py-8">
         <div className="h-36 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-900 bg-clip-text text-9xl font-bold text-transparent">
           Spaces

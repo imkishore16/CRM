@@ -23,7 +23,6 @@ export default function Upload({
   
   return (
     <div className="flex min-h-screen flex-col">
-      <Appbar/>
       <div className="mx-auto rounded-lg p-2 bg-gradient-to-r from-indigo-600 to-violet-800 text-2xl font-bold">
         {spaceName}
       </div>
@@ -38,7 +37,7 @@ export default function Upload({
                 loading={loading}
                 setLoading={setLoading}
                 spaceId={spaceId}
-                index="productdata"
+                indexName="productdata"
               />
         </div>
         <div className="flex items-center justify-between mb-4">
@@ -50,7 +49,7 @@ export default function Upload({
                 loading={loading}
                 setLoading={setLoading}
                 spaceId={spaceId}
-                index="customerdata"
+                indexName="customerdata"
               />
         </div>
         </div>
