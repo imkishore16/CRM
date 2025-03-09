@@ -14,12 +14,9 @@ import CardSkeleton from "./ui/cardSkeleton";
 import SpacesCard from "./SpacesCard";
 
 interface Space {
-  endTime?: Date | null;
-  hostId: string;
-  id: Number;
+  id: number;
   isActive: boolean;
   name: string;
-  startTime: Date | null;
 }
 
 export default function HomeView() {
@@ -82,7 +79,7 @@ export default function HomeView() {
     }
   };
 
-  const handleDeleteSpace = async (spaceId: string) => {
+  const handleDeleteSpace = async (spaceId: number) => {
     try {
       const response = await fetch(`/api/spaces/?spaceId=${spaceId}`, {
         method: "DELETE",

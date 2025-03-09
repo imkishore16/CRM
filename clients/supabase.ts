@@ -26,6 +26,8 @@ async function uploadDocument(file:File, bucketName:string, filePath:string) {
     }
 }
 
+async function previewDocument(bucketName:string, filePath:string) {}
+async function listAllDocuments(bucketName:string, filePath:string) {}
 async function downloadDocument(bucketName:string, filePath:string) {
     try {
       const { data, error } = await supabase.storage
@@ -43,3 +45,4 @@ async function downloadDocument(bucketName:string, filePath:string) {
       throw error;
     }
 }
+

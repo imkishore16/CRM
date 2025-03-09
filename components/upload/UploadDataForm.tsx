@@ -7,8 +7,9 @@ type Props = {
   setLoading: (value: boolean) => void;
   loading: boolean;
   enqueueToast: (type: "error" | "success", message: string) => void;
-  spaceId : Number;
-  indexName :string
+  spaceId : number;
+  indexName :string;
+  uploadApi: (files: File[], spaceId: number, indexName: string) => Promise<any>;
 };
 
 export default function UploadDataForm({
@@ -16,7 +17,8 @@ export default function UploadDataForm({
   setLoading,
   loading,
   spaceId,
-  indexName
+  indexName,
+  uploadApi
 }: Props) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const user = useSession().data?.user;
@@ -65,15 +67,8 @@ export default function UploadDataForm({
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      selectedFiles.forEach((file) => formData.append("files", file));
-      formData.append("spaceId", spaceId.toString());
-      formData.append("indexName", indexName);
-      console.log("Called upload api")
-      const response = await fetch(`/api/embed`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await uploadApi(selectedFiles, spaceId, indexName);
+      
       
       if (response.ok) {
         enqueueToast("success", "Files uploaded successfully!");
@@ -95,10 +90,7 @@ export default function UploadDataForm({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        {/* <h1 className="text-xl font-bold">Upload Files</h1> */}
       </div>
-
-      {/* List of Uploaded Files */}
       <div className="space-y-2 mb-4">
         {selectedFiles.map((file) => (
           <div

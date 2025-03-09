@@ -9,8 +9,6 @@ export default async function Home(){
   const session =await  getServerSession(authOptions);
 
   if (!session?.user.id) {
-    // console.log(session)
-    // console.log(session?.user.email)
     return <h1>Please Log in....</h1>;
   }
  return <HomeView></HomeView>

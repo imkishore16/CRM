@@ -1,6 +1,6 @@
 import { NextResponse,NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import twilioClient from "@/client/twilioClient";
+import twilioClient from "@/clients/twilioClient";
 
 import { Queue } from "bull";
 import Bull from "bull";

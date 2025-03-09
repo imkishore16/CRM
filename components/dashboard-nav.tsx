@@ -16,14 +16,7 @@ interface DashboardNavProps {
 
 export default function DashboardNav({ navItems }: DashboardNavProps) {
   const pathname = usePathname()
-  // console.log("++++++++++++++++++++++++++++++++++++++++++++++")
-  // console.log("pathname :",pathname)
-  // navItems.map((item)=>{
-  //   const isActive = pathname === item.href
-  //   console.log("item.name :",item.name)
-  //   console.log("item.href :",item.href)
 
-  // })
   return (
     <nav className="flex flex-col space-y-1">
       {navItems.map((item) => {

@@ -1,42 +1,29 @@
 "use client";
-import { useEffect, useState } from "react";
-import jwt from "jsonwebtoken";
-import Upload from "@/components/upload";
-import ErrorScreen from "@/components/ErrorScreen";
-import LoadingScreen from "@/components/LoadingScreen";
-import { useRouter } from "next/navigation";
 
+import { useRouter } from "next/navigation";
 
 type Props = {
   params: { spaceId: number };
 };
 
-export default function Component({params}:Props) {
-  const [spaceId, setSpaceId] = useState(-1);
-  useEffect(() => {
-    async function getParams() {
-      const unwrappedParams = await params;
-      setSpaceId(unwrappedParams.spaceId);
-    }
-    getParams();
-  }, [params]);
+export default function Dashboard({ params }: Props) {
   const router = useRouter(); 
-  const [loading, setLoading] = useState(true);
-  
+
+  // Directly access spaceId without useState/useEffect
+  const { spaceId } = params;  
+
   const handleNavigation = (path: string) => {
     router.push(path); 
   };
-  
+
   return (
     <div className="flex">
-
       <div className="flex-1 p-8">
-        <p>Welcome to your dashboard. Here's an overview of your account.</p>
+        <p>Welcome to your dashboard for space ID: {spaceId}</p>
         <div> analytics here </div>
       </div>
     </div>
   );
-  
 }
 
 export const dynamic = "auto";

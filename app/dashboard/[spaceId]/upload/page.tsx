@@ -6,10 +6,10 @@ import { getServerSession } from "next-auth";
 import Upload from "@/components/upload";
 type Props = {
     params: { spaceId: number };
-  };
+};
   
 export default async function UploadPage({ params }: Props) {
-    const { spaceId } = await params;
+    const { spaceId } = params;
     const session =await  getServerSession(authOptions);
     
     return (

@@ -43,12 +43,18 @@ model SpaceCustomer{
   id Int @id @default(autoincrement())
   spaceId Int 
   mobileNumber String
-  campaignId Int
-  status Boolean
+  // campaignId Int
+  // status CampaignStatus
 }
 
 enum Role {
   USER
   ADMIN
   SUPER_ADMIN
+}
+
+enum CampaignStatus {
+  NOT_STARTED // 0
+  ONGOING     // 1
+  COMPLETED   // 2
 }

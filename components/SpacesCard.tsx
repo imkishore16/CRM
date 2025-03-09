@@ -19,10 +19,10 @@ import {
 
 interface SpaceCardProps {
   space: {
-    id: Number;
+    id: number;
     name: string;
   };
-  handleDeleteSpace: (id: Number) => void;
+  handleDeleteSpace: (id: number) => void;
 }
 
 export default function SpacesCard({
@@ -31,9 +31,9 @@ export default function SpacesCard({
 }: SpaceCardProps) {
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [spaceToDelete, setSpaceToDelete] = useState<Number | null>(null);
+  const [spaceToDelete, setSpaceToDelete] = useState<number | null>(null);
 
-  const handleDeleteClick = (id: Number) => {
+  const handleDeleteClick = (id: number) => {
     setSpaceToDelete(id);
     setIsDialogOpen(true);
   };

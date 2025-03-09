@@ -1,4 +1,4 @@
-import pc from "@/client/pinecone";
+import pc from "@/clients/pinecone";
 
 
 async function initializePineConeDB(indexName: string) {

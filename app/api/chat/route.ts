@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import pc from "@/client/pinecone";
+import pc from "@/clients/pinecone";
 import { OpenAI } from "@langchain/openai";
-import llm from "@/client/llm";
-import embeddingModel from "@/client/embeddingModel";
+import llm from "@/clients/llm";
+import embeddingModel from "@/clients/embeddingModel";
 import prisma from "@/lib/db";
 import { HuggingFaceInference } from "@langchain/community/llms/hf"; // For Hugging Face LLM
 import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf"; // For Hugging Face embeddings
@@ -35,9 +35,9 @@ export async function POST(req: NextRequest) {
         });
         
         const productIndexName="productdata"+spaceId;
-        const productIndex = pc.index(productIndexName , `https://${productIndexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+        const productIndex = pc.index(productIndexName , `https://${productIndexName}${process.env.PINECONE_URL}`);
         const customerIndexName="customerdata"+spaceId;
-        const customerIndex = pc.index(customerIndexName , `https://${customerIndexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+        const customerIndex = pc.index(customerIndexName , `https://${customerIndexName}${process.env.PINECONE_URL}`);
 
 
         const pastConversations = await fetchConversationHistory(mobileNumber,customerIndex);
@@ -149,7 +149,6 @@ async function generateResponse(query: string, context: string, history: string)
         ${query}
       `;
   
-      // Create a prompt template for RAG
       const prompt = ChatPromptTemplate.fromTemplate(`
         You are a helpful assistant. Use the following context and conversation history to answer the user's question:
         
@@ -162,7 +161,6 @@ async function generateResponse(query: string, context: string, history: string)
       // Create a chain with the prompt, LLM, and output parser
       const chain = prompt.pipe(llm).pipe(new StringOutputParser());
   
-      // Generate the response
       const response = await chain.invoke({ fullContext, query });
   
       return response;

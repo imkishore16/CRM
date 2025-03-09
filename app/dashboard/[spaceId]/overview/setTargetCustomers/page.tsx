@@ -2,12 +2,13 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { PlusCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface FormRow {
   id: string
@@ -15,31 +16,62 @@ interface FormRow {
   text: string
 }
 
-export default function DynamicForm() {
+interface CustomerData {
+  id: number
+  mobileNumber: string
+  information: string
+}
+
+type Props = {
+  params: { spaceId: number }
+}
+
+export default function AddTargetCustomersForm({ params }: Props) {
+  const spaceId = params.spaceId
+  console.log(spaceId)
   const { toast } = useToast()
   const [rows, setRows] = useState<FormRow[]>([{ id: crypto.randomUUID(), mobile: "", text: "" }])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customers, setCustomers] = useState<CustomerData[]>([])
 
-  // Store data in a Map
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await fetch(`http://localhost:3000/api/customers?spaceId=${spaceId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          setCustomers(data.customers)
+          console.log("+++++++++++++++++++++++++++++++++++++++++++++")
+          console.log("data ",)
+        } else {
+          toast({ description: "Failed to fetch customers." })
+        }
+      } catch (error) {
+        console.error("Error fetching customers:", error)
+        toast({ description: "An error occurred while fetching customers." })
+      }
+    }
+
+    fetchCustomers()
+  }, [spaceId, toast])
+
   const formDataMap = new Map<string, { mobile: string; text: string }>()
-
-  // Update the map with current form data
   rows.forEach((row) => {
     formDataMap.set(row.id, { mobile: row.mobile, text: row.text })
   })
-
   const addNewRow = () => {
     setRows([...rows, { id: crypto.randomUUID(), mobile: "", text: "" }])
   }
-
   const updateRow = (id: string, field: keyof Omit<FormRow, "id">, value: string) => {
     setRows(rows.map((row) => (row.id === id ? { ...row, [field]: value } : row)))
   }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validate form
     const isValid = rows.every((row) => row.mobile.trim() && row.text.trim())
 
     if (!isValid) {
@@ -54,23 +86,39 @@ export default function DynamicForm() {
     setIsSubmitting(true)
 
     try {
-      // Convert Map to an array for API submission
-      const formData = Array.from(formDataMap.entries()).map(([id, data]) => ({
-        id,
-        ...data,
-      }))
+      const formData = new FormData()
+      rows.forEach((row) => {
+        const data = { mobile: row.mobile, text: row.text }
+        Object.entries(data).forEach(([key, value]) => {
+          formData.append(`${row.id}[${key}]`, value)
+        })
+      })
 
-      // Call your API here
-      const response = await mockApiCall(formData)
+      const indexName="customerdata"
+      const response = await fetch(`/api/embed?space=${spaceId}&index=${indexName}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: formData,
+      })
 
-      if (response.success) {
+      if (response.ok) {
         toast({
           title: "Success",
           description: "Your data has been submitted successfully",
         })
 
-        // Reset form after successful submission
         setRows([{ id: crypto.randomUUID(), mobile: "", text: "" }])
+
+        // Refresh customer data after successful submission
+        const res = await fetch(`http://localhost:3000/api/customers?spaceId=${spaceId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          setCustomers(data)
+        }
       }
     } catch (error) {
       toast({
@@ -83,13 +131,10 @@ export default function DynamicForm() {
     }
   }
 
-  // Mock API call - replace with your actual API
-  const mockApiCall = async (data: any) => {
-    return new Promise<{ success: boolean }>((resolve) => {
-      setTimeout(() => {
-        console.log("Submitted data:", data)
-        resolve({ success: true })
-      }, 1500)
+  const apiCall = async (data: any) => {
+    const res = await fetch(`http://localhost:3000/api/embed`, {
+      method: "POST",
+      body: JSON.stringify({ data }),
     })
   }
 
@@ -138,6 +183,36 @@ export default function DynamicForm() {
           </Button>
         </div>
       </form>
+
+      {/* Customer Data Table */}
+      <div className="mt-12">
+        <h2 className="text-xl font-bold mb-4">Customer Data</h2>
+
+        {customers.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Mobile Number</TableHead>
+                <TableHead>Information</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {customers.map((customer,index) => (
+                <TableRow key={index}>
+                  <TableCell>{index+1}</TableCell>
+                  <TableCell>{customer.mobileNumber}</TableCell>
+                  <TableCell>{customer.information}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-6 bg-gray-50 rounded-md">
+            <p className="text-gray-500">No customer data available</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 import { useRouter } from "next/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight,Plus } from "lucide-react"
 
 interface TableItem {
   id: number
@@ -24,7 +24,7 @@ export default function ClickableTable({ items }: ClickableTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="text-black font-semibold">Navigation</TableHead>
+          <TableHead>Navigation</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -36,7 +36,7 @@ export default function ClickableTable({ items }: ClickableTableProps) {
           >
             <TableCell className="flex justify-between items-center py-4">
               <span>{item.title}</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <Plus className="h-4 w-4 text-muted-foreground" />
             </TableCell>
           </TableRow>
         ))}

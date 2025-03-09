@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import pc from "@/client/pinecone";
+import pc from "@/clients/pinecone";
 import { OpenAI } from "@langchain/openai";
-import llm from "@/client/llm";
-import embeddingModel from "@/client/embeddingModel";
+import llm from "@/clients/llm";
+import embeddingModel from "@/clients/embeddingModel";
 import prisma from "@/lib/db";
 import { HuggingFaceInference } from "@langchain/community/llms/hf"; // For Hugging Face LLM
 import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf"; // For Hugging Face embeddings
@@ -157,7 +157,6 @@ async function generateResponse(query: string, context: string, history: string)
         promo codes
         mobile numbers
 
-         
       `;
   
       // Create a prompt template for RAG
