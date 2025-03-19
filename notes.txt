@@ -21,3 +21,10 @@ what are chains
 
 
 What is streaming
+
+
+
+
+
+Fine-tuning with the Gemini API:
+Fine-tuning is a process that can improve your model's performance on specific tasks or help the model adhere to specific output requirements when instructions aren't sufficient and you have a set of examples that demonstrate the outputs you want.

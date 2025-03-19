@@ -62,7 +62,7 @@ async function fetchMobileNumbers(campaignId: number): Promise<string[]> {
       where: { campaignId },
       select: { mobileNumber: true },
     });
-    return customers.map((customer) => customer.mobileNumber);
+    return customers.map((customer:any) => customer.mobileNumber);
 }
 
 async function updateCampaignStatus(mobileNumber: string, campaignId: number): Promise<void> {

@@ -1,18 +1,14 @@
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import useRedirect from "@/hooks/useRedirect";
-import { authOptions } from "@/lib/auth-options";
-import { getServerSession } from "next-auth";
-import Upload from "@/components/upload";
-type Props = {
-    params: { spaceId: number };
-};
-  
-export default async function UploadPage({ params }: Props) {
-    const { spaceId } = params;
-    const session =await  getServerSession(authOptions);
-    
-    return (
-        <Upload spaceId={spaceId} />
-    )
+import { redirect } from "next/navigation"
+
+interface Props {
+  params: {
+    spaceId: string
   }
+}
+
+export default function UploadPage({ params }: Props) {
+  const { spaceId } = params
+
+  redirect(`/dashboard/${spaceId}/upload/campaignData`)
+}
+

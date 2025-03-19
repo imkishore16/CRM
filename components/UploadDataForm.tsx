@@ -9,7 +9,7 @@ type Props = {
   enqueueToast: (type: "error" | "success", message: string) => void;
   spaceId : number;
   indexName :string;
-  uploadApi: (files: File[], spaceId: number, indexName: string) => Promise<any>;
+  embedApi: (files: File[], spaceId: number, indexName: string) => Promise<any>;
 };
 
 export default function UploadDataForm({
@@ -18,7 +18,7 @@ export default function UploadDataForm({
   loading,
   spaceId,
   indexName,
-  uploadApi
+  embedApi: embedApi
 }: Props) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const user = useSession().data?.user;
@@ -67,7 +67,7 @@ export default function UploadDataForm({
     setLoading(true);
 
     try {
-      const response = await uploadApi(selectedFiles, spaceId, indexName);
+      const response = await embedApi(selectedFiles, spaceId, indexName);
       
       
       if (response.ok) {

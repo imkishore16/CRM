@@ -11,15 +11,13 @@ interface Props {
 export default async function Overview({ params }: Props) {
   const spaceId = params.spaceId;
   
-  const session = await getServerSession(authOptions);
-  
   const tableData = [
     { id: 1, title: "Set Target Users", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
     { id: 2, title: "Product links", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
     { id: 3, title: "Platforms", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
     { id: 4, title: "Campaign Details", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
     { id: 5, title: "Promo Codes", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
-    { id: 6, title: "Something else", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
+    { id: 6, title: "View product data", href: `/dashboard/${spaceId}/overview/viewProductData`},
   ]
   
   return (

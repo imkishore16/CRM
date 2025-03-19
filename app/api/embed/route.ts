@@ -1,20 +1,24 @@
-import * as fs from "fs";
 import * as path from "path";
 import { NextRequest,NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { Index, Pinecone } from "@pinecone-database/pinecone";
-import { HfInference } from "@huggingface/inference";
 import PDFParser from "pdf2json";
 import pdf from "pdf-parse";
 import embeddingModel from "@/clients/embeddingModel";
 import pc from "@/clients/pinecone";
 import { Buffer } from "buffer";
-import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import pdfParse from 'pdf-parse';
 import prisma from "@/lib/db";
 import { cookies } from "next/headers";
 export const runtime = 'nodejs' 
+import { promises as fs } from "fs"; 
+import { randomUUID, UUID } from "crypto";
+
+interface Map{
+  key :string, // promos or link
+  value :string // information
+}
 
 
 export async function POST(req: NextRequest) {
@@ -22,24 +26,83 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData();
         const { searchParams } = new URL(req.url);
 
-        // /api/embed?space=${spaceId}&index=${indexName}
         const spaceId = searchParams.get("spaceId") ?? ""; 
-        const dataType = searchParams.get("indexName"); 
-        const files = formData.getAll('files') as File[];
+        const namespace = searchParams.get("namespace");
+        // formData.getAll() returns an array of strings (or File objects if files were uploaded).
+        const promoCodes: Map[] = formData.getAll("promoCodes").map((item) =>
+          JSON.parse(item as string)
+        );
+        const links: Map[] = formData.getAll("links").map((item) =>
+          JSON.parse(item as string)
+        );
 
-        console.log("Received files:", files.map(f => f.name));
+        
+        //filter the campaign data using source as filter 
+        if (namespace==="campaigndata")
+        {   
+            const indexName = "campaign" + spaceId;
+            const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+            
+            const campaignName = formData.get('campaignName') as string ;
+            const campaignType = formData.get('campaignType') as string ;
+            const overrideCompany = formData.get('overrideCompany') as string ;
+            const personaName = formData.get('personaName') as string ;
+            const jobRole = formData.get('jobRole') as string ;
+            const campaignObjective = formData.get('campaignObjective') as string ;
+            
+            const communicationStylesString = formData.get('communicationStyles') as string ;
+            const communicationStyles = JSON.parse(communicationStylesString) as string[];
 
-        const indexName = dataType + spaceId;
-        const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+            const campaignFlowFile = formData.get("campaignFlow") as File; //not needed for now
+            const productLinks = formData.get("productLinks") as File;
+            const initialMessageFile = formData.get("initialMessage") as File; 
+            const followUpMessageFile = formData.get("followUpMessage") as File;
 
-        if (dataType==="productdata")
+            // need to parse the productLinks
+            
+            try {
+                const campaignFlow = await readFileContent(campaignFlowFile);
+                const initialMessage = await readFileContent(initialMessageFile);
+                const followUpMessage = await readFileContent(followUpMessageFile);
+
+                const vector = {
+                  id: randomUUID(),
+                  values: [],
+                  metadata: { 
+                    campaignName:campaignName ,
+                    campaignType:campaignType, 
+                    overrideCompany:overrideCompany ,
+                    personaName:personaName ,
+                    jobRole:jobRole,
+                    campaignObjective:campaignObjective,
+
+                    communicationStyles:communicationStyles,
+
+                    initialMessage:initialMessage,
+                    followUpMessage:followUpMessage
+
+                  },
+                  source:"variables"
+                }
+                await index.namespace("variables").upsert([vector]);
+            } catch (error) {
+                console.error(`Error embedding campaing data`, error);
+                return NextResponse.json(
+                    { message: `Error embedding campaing data: ${error}` },
+                    { status: 500 }
+                );
+            }
+            
+        }
+        else if (namespace==="productdata")
         {
+            const indexName = "campaign" + spaceId;
+            const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+            const files = formData.getAll('files') as File[];
+
             for (const file of files) {
                 try {
-                    const content = await readFileContent(file);
-                    console.log(`Successfully read file ${file.name}, content length: ${content.length}`);
                     const result = await embedProductData(file, index);
-                    // await embedCustomProductData2(file,index)
                     if (!result.success) {
                         console.error(`Failed to process file ${file.name}:`, result);
                         return NextResponse.json(
@@ -56,25 +119,81 @@ export async function POST(req: NextRequest) {
                 }
             }
         }
-        else  // store customer data properly
+        else if(namespace==="customerdata") // TODO : store customer data properly
         {
-            for (const file of files) {
-                try {
-                    const result = await embedCustomerData(file,index,spaceId,"1");
-                    if (!result.success) {
-                        console.error(`Failed to process file ${file.name}:`, result.message);
-                        return NextResponse.json(
-                            { message: result.message },
-                            { status: 500 }
-                        );
-                    }
-                } catch (error) {
-                    console.error(`Error processing file ${file.name}:`, error);
-                    return NextResponse.json(
-                        { message: `Error processing file ${file.name}: ${error}` },
-                        { status: 500 }
-                    );
+          const indexName = "campaign" + spaceId;
+          const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+          const files = formData.getAll('files') as File[];
+          for (const file of files) {
+              try {
+                  const result = await embedCustomerData(file,index,spaceId,"1");
+                  if (!result.success) {
+                      console.error(`Failed to process file ${file.name}:`, result.message);
+                      return NextResponse.json(
+                          { message: result.message },
+                          { status: 500 }
+                      );
+                  }
+              } catch (error) {
+                  console.error(`Error processing file ${file.name}:`, error);
+                  return NextResponse.json(
+                      { message: `Error processing file ${file.name}: ${error}` },
+                      { status: 500 }
+                  );
+              }
+          }
+        }
+        else if(namespace==="promo")
+        {
+          // embeeded text is the usecase or scenario the promo is for and put promo in metadata
+          // namespace = promocodes , add and edit and delete functionalities , 
+          const indexName ="campaign" + spaceId;
+          const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+          
+          try {
+            const vectors = await Promise.all(
+              links.map(async (item) => {
+                const embedding =await embeddingModel.embedQuery(item.value); // value is the description
+
+                return{
+                  id: `promo_${Date.now()}_${Math.random()}`, // Unique ID
+                  values: embedding, // Store embeddings
+                  metadata: { key: item.key, text: item.value }, 
                 }
+              })
+            )
+            await index.namespace("promo").upsert(vectors);
+            console.log("✅ Successfully uploaded to Pinecone.");
+          }
+          catch (error){
+            console.error("Error uploading to Pinecone:" ,error);
+          }
+        
+        }
+        else if(namespace==="links")
+          {
+            // embeeded text is waht the link is for and put the link in metadata
+            // namespace = links , add and edit and delete functionalities , 
+            const indexName = "campaign" + spaceId;
+            const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+            
+            try {
+              const vectors = await Promise.all(
+                links.map(async (item) => {
+                  const embedding = await embeddingModel.embedQuery(item.value);
+
+                  return{
+                    id: `promo_${Date.now()}_${Math.random()}`, // Unique ID
+                    values: embedding, // Store embeddings
+                    metadata: { key: item.key, text: item.value }, 
+                  }
+                })
+              )
+              await index.namespace("links").upsert(vectors);
+              console.log("Successfully uploaded to Pinecone.");
+            }
+            catch (error){
+              console.error("Error uploading to Pinecone:" ,error);
             }
         }
         
@@ -105,8 +224,6 @@ async function embedProductData(file: File, index: any): Promise<any> {
         if (chunks.length === 0) {
             throw new Error("No chunks were created from the file content.");
         }
-        console.log("++++++++++++++++++++++++++++++++++")
-        console.log("embedProductData : " , chunks)
         const embeddedData = await embeddingModel.embedDocuments(chunks)
         
         const ids = chunks.map((_, index) => `chunk_${index}`);
@@ -115,12 +232,22 @@ async function embedProductData(file: File, index: any): Promise<any> {
             id,
             values: embeddedData[index],
             metadata: {
-                chunk: index + 1,
+                chunk: index ,
                 text: chunks[index],
             },
         })) ;
-        
+        /*Batch Upserts:
+        If you're dealing with a large number of chunks, you can split the vectors array into smaller batches and upsert them sequentially or in parallel.
+
+        typescript
+        Copy
+        const batchSize = 100; // Adjust based on your needs
+        for (let i = 0; i < vectors.length; i += batchSize) {
+            const batch = vectors.slice(i, i + batchSize);
+            await index.namespace("productdata").upsert(batch);
+        } */
         try {
+          // TODO : try insert
             await index.namespace("productdata").upsert(vectors); 
             console.log("Records upserted successfully.");
         } catch (error) {
@@ -143,7 +270,6 @@ async function embedProductData(file: File, index: any): Promise<any> {
 async function embedCustomerData(file: File, index: any,spaceId : string,campaignId : string) {
     try{
         const data = await readFileContent(file);
-        console.log("pdfData : " , data)
         // Regex to match "MobileNumber: User Data"
         const regex = /(\d{10})\s*:\s*([\s\S]+?)(?=\n\d{10}\s*:|$)/g;
         const matches = [...data.matchAll(regex)];
@@ -196,7 +322,6 @@ while (start < text.length) {
     const chunk = text.slice(start, end);
     chunks.push(chunk);
     
-    // Move the start position forward by (chunkSize - overlap)
     start += chunkSize - overlap;
 }
 
@@ -216,57 +341,121 @@ async function readFileContent(file: File): Promise<string> {
             throw new Error(`Unsupported file type: ${file.name}`);
         }
         switch (fileExtension) {
-            case "pdf":
-                try {
-                    // 1
-                    const arrayBuffer = await file.arrayBuffer();
-                    const buffer = Buffer.from(arrayBuffer);
-                    const data = await pdfParse(buffer);
-                    console.log("ParesedData : ", data.text)
-                    
-                    // 2
-                    file.arrayBuffer().then((dataBuffer) => {
-                        pdf(buffer).then(function (data) {
-                            // Process the PDF data here
-                            console.log(data);
-                        }).catch((err) => {
-                            console.error('Error processing PDF:', err);
-                        });
-                        }).catch((err) => {
-                        console.error('Error reading file as ArrayBuffer:', err);
-                    });
+          case "pdf":
+              // try {
+              //     // For browser environments, we need to use different approach
+              //     if (typeof window !== 'undefined') {
+              //         // Convert the file to ArrayBuffer
+              //         const arrayBuffer = await file.arrayBuffer();
+                      
+              //         // Use pdf.js to parse the PDF
+              //         const pdf = await import('pdfjs-dist');
+              //         // Set the worker source
+              //         const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
+              //         pdf.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+                      
+              //         // Load the document
+              //         const loadingTask = pdf.getDocument(arrayBuffer);
+              //         const document = await loadingTask.promise;
+                      
+              //         // Extract text from all pages
+              //         let text = '';
+              //         for (let i = 1; i <= document.numPages; i++) {
+              //             const page = await document.getPage(i);
+              //             const content = await page.getTextContent();
+              //             const pageText = content.items.map(item => item.str).join(' ');
+              //             text += pageText + '\n';
+              //         }
+                      
+              //         console.log("Parsed PDF Data:", text);
+              //         return text;
+              //     } else {
+              //         // For Node.js environment, use a different approach
+              //         const { PDFLoader } = await import("langchain/document_loaders/fs/pdf");
+              //         const fs = await import('fs');
+              //         const path = await import('path');
+                      
+              //         // Create a temporary file
+              //         const tempPath = path.join(process.cwd(), 'temp_pdf_file.pdf');
+              //         fs.writeFileSync(tempPath, Buffer.from(await file.arrayBuffer()));
+                      
+              //         // Use LangChain's PDFLoader
+              //         const loader = new PDFLoader(tempPath);
+              //         const docs = await loader.load();
+                      
+              //         // Clean up temp file
+              //         fs.unlinkSync(tempPath);
+                      
+              //         // Extract text
+              //         const text = docs.map((doc) => doc.pageContent).join("\n");
+              //         console.log("Parsed PDF Data:", text);
+              //         return text;
+              //     }
+              // } catch (error) {
+              //     console.error('Error parsing PDF:', error);
+              //     throw new Error(`Failed to parse PDF: ${error.message}`);
+              // }
+              // ------------------------------------------------------------------------------------
+              // try {
+              //   // Convert the file to ArrayBuffer
+              //   const arrayBuffer = await file.arrayBuffer();
+              //   const uint8Array = new Uint8Array(arrayBuffer);
+                
+              //   const buffer = Buffer.from(uint8Array);
+              //   // Use pdf-parse to extract text
+              //   const result = await pdfParse(buffer);
+              //   const text = result.text;
+                
+              //   console.log("Parsed PDF Data:", text);
+              //   return text;
+              // } catch (error) {
+              //     console.error('Error parsing PDF:', error);
+              //     throw new Error(`Failed to parse PDF: ${error}`);
+              // }
+          
+              try {
+                const tempFilePath = `/tmp/${file.name}.pdf`;
 
-                    pdf(buffer).then(function (data) {
-                        console.log(data.text);
-                    });
+                // Convert ArrayBuffer to Buffer
+                const fileBuffer = Buffer.from(await file.arrayBuffer());
 
+                // Save the buffer as a file
+                await fs.writeFile(tempFilePath, fileBuffer);
 
-                    // 3 - uses langchaiun pdf parser
-                    // Convert the file to a Blob
-                    const blob = new Blob([file], { type: "application/pdf" });
+                // Create a new Promise for parsing
+                const pdfParser = new (PDFParser as any)(null, 1);
 
-                    // Use LangChain's PDFLoader to parse the PDF
-                    const loader = new PDFLoader(blob);
-                    const docs = await loader.load();
+                // Create a promise to handle the parsing
+                const parsingPromise = new Promise((resolve, reject) => {
+                  console.log("In the promise");
+                  pdfParser.on("pdfParser_dataError", (errData: any) => {
+                    console.error(errData.parserError);
+                    reject(errData.parserError); // Reject the promise on error
+                  });
 
-                    // Extract text from the parsed documents
-                    const text = docs.map((doc) => doc.pageContent).join("\n");
-                    console.log("Parsed PDF Data:", text);
+                  pdfParser.on("pdfParser_dataReady", (parsedText:string) => {
+                    parsedText = (pdfParser as any).getRawTextContent();
+                    console.log("Parsed Text:", parsedText);
+                    resolve(parsedText); // Resolve the promise with parsed text
+                  });
+                });
 
-                    return text;
-
-                } catch (error) {
-                    console.error('Error parsing PDF:', error);
-                    
-                    throw new Error(`Failed to parse PDF: ${error}`);
-                }
-            
-                case "txt":
-                    return await file.text();
-                    
-                    default:
-                throw new Error(`Unsupported file type: ${fileExtension}`);
-            }
+                // Load and parse the PDF
+                await pdfParser.loadPDF(tempFilePath);
+                await parsingPromise;
+                
+                
+              } catch (error) {
+                  console.error('Error parsing PDF:', error);
+                  throw new Error(`Failed to parse PDF: ${error}`);
+              }
+        
+          case "txt":
+              return await file.text();
+              
+          default:
+              throw new Error(`Unsupported file type: ${fileExtension}`);
+      }
     } catch (error) {
         console.error("Error in readFileContent:", error);
         throw error;
@@ -274,6 +463,19 @@ async function readFileContent(file: File): Promise<string> {
 }
 
 
+function parseLinksFromFile(content: string):Map[] {
+  const linkArray: Map[] = [];
+  
+  // Regex to capture 'Link Description' and 'Link' values
+  const regex = /Link Description\s*:\s*(.*?)\s*Link\s*:\s*(https?:\/\/\S+)/g;
+  
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    linkArray.push({ key: match[1].trim(), value: match[2].trim() });
+  }
+  
+  return linkArray;
+}
 
 
 

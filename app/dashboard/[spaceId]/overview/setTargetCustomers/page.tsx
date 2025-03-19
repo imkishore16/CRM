@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { PlusCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useParams } from "next/navigation"
 
 interface FormRow {
   id: string
@@ -26,8 +27,10 @@ type Props = {
   params: { spaceId: number }
 }
 
-export default function AddTargetCustomersForm({ params }: Props) {
-  const spaceId = params.spaceId
+export default function SetTargetCustomersForm() {
+  const params = useParams();
+  const spaceId = params.spaceId;
+
   console.log(spaceId)
   const { toast } = useToast()
   const [rows, setRows] = useState<FormRow[]>([{ id: crypto.randomUUID(), mobile: "", text: "" }])
@@ -37,7 +40,7 @@ export default function AddTargetCustomersForm({ params }: Props) {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/api/customers?spaceId=${spaceId}`, {
+        const res = await fetch(`${process.env.NEXTAUTH_URL}/api/customers?spaceId=${spaceId}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         })
@@ -45,8 +48,6 @@ export default function AddTargetCustomersForm({ params }: Props) {
         if (res.ok) {
           const data = await res.json()
           setCustomers(data.customers)
-          console.log("+++++++++++++++++++++++++++++++++++++++++++++")
-          console.log("data ",)
         } else {
           toast({ description: "Failed to fetch customers." })
         }
@@ -94,8 +95,8 @@ export default function AddTargetCustomersForm({ params }: Props) {
         })
       })
 
-      const indexName="customerdata"
-      const response = await fetch(`/api/embed?space=${spaceId}&index=${indexName}`, {
+      const namespace="customerdata"
+      const response = await fetch(`/api/embed?spaceId=${spaceId}&namespace=${namespace}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: formData,
@@ -131,12 +132,7 @@ export default function AddTargetCustomersForm({ params }: Props) {
     }
   }
 
-  const apiCall = async (data: any) => {
-    const res = await fetch(`http://localhost:3000/api/embed`, {
-      method: "POST",
-      body: JSON.stringify({ data }),
-    })
-  }
+  
 
   return (
     <div className="container max-w-3xl py-10">

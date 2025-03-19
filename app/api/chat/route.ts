@@ -34,21 +34,21 @@ export async function POST(req: NextRequest) {
             select: { spaceId: true },
         });
         
-        const productIndexName="productdata"+spaceId;
-        const productIndex = pc.index(productIndexName , `https://${productIndexName}${process.env.PINECONE_URL}`);
-        const customerIndexName="customerdata"+spaceId;
-        const customerIndex = pc.index(customerIndexName , `https://${customerIndexName}${process.env.PINECONE_URL}`);
+        const indexName="campaign"+spaceId;
+        // const productIndex = pc.index(index , `https://${index}${process.env.PINECONE_URL}`);
+        const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
 
 
-        const pastConversations = await fetchConversationHistory(mobileNumber,customerIndex);
+
+        const pastConversations = await fetchConversationHistory(mobileNumber,index);
 
         const summarizedHistory = await summarizeConversation(pastConversations);
 
-        const relevantDocs = await similaritySearch(query, productIndex);
+        const relevantDocs = await similaritySearch(query, index);
         
         const response = await generateResponse(query, relevantDocs,summarizedHistory );
         
-        await saveConversation(mobileNumber, query, response,customerIndex);
+        await saveConversation(mobileNumber, query, response,index);
         return NextResponse.json({ message: response }, { status: 200 });
     } catch (error) {
         console.error("Error processing request:", error);
@@ -107,26 +107,34 @@ async function fetchConversationHistory(mobileNumber: string , index:any): Promi
     }
 }
 
-
-async function similaritySearch(query: string, index:any) {
+async function similaritySearch(query: string, namespace:string,index:any) {
     try {
 
         const queryEmbedding  = await embeddingModel.embedQuery(query)
 
-        const queryResponse = await index.namespace("productdata").query({
+        const queryResponse = await index.namespace(namespace).query({
             vector: queryEmbedding ,
             topK: 3,
             includeValues: true,
+            includeMetadata: true
         });
 
         if (!queryResponse.matches || queryResponse.matches.length === 0) {
             return "No relevant results found.";
         }
+        console.log(queryResponse)
+        
+        
+        // Extract the text from the metadata of each match , ie uses metadata
         const relevantTexts = queryResponse.matches
-            .map((match:any) => match.metadata?.text || "")
-            .join("\n");
+          .map((match: any) => match.metadata?.text || "")
+          .filter((text: string) => text.trim() !== "")
+          .join("\n\n");
+        
+        
+        //what is  queryResponse.pageContent
 
-        return relevantTexts;
+        return relevantTexts
 
     } catch (error) {
         console.error("Error in similarity search:", error);
