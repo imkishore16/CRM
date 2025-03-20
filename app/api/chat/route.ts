@@ -9,7 +9,20 @@ import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/
 import { RetrievalQAChain } from "langchain/chains";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
+import { reservationsUrl } from "twilio/lib/jwt/taskrouter/util";
+import redis from "@/clients/redis";
 
+export interface CampaignVariables {
+  campaignName: string;
+  campaignType: string;
+  overrideCompany: string;
+  personaName: string;
+  jobRole: string;
+  campaignObjective: string;
+  communicationStyles: string;
+  initialMessage: string;
+  followUpMessage: string;
+}
 
 // this is the chat api , the bread and butter for the conversation to take place 
 /*
@@ -35,32 +48,111 @@ export async function POST(req: NextRequest) {
         });
         
         const indexName="campaign"+spaceId;
-        // const productIndex = pc.index(index , `https://${index}${process.env.PINECONE_URL}`);
-        const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
+        const index = pc.index(indexName , `https://${indexName}-${process.env.PINECONE_URL}`);
 
-
-
+        //conversation data
         const pastConversations = await fetchConversationHistory(mobileNumber,index);
-
         const summarizedHistory = await summarizeConversation(pastConversations);
 
-        const relevantDocs = await similaritySearch(query, index);
+        //similarity search for product data
+        const relevantDocs = await similaritySearch(query,"productdata",index);
         
-        const response = await generateResponse(query, relevantDocs,summarizedHistory );
+        // store / get cached variables
+        const campaignVariables = await handleCampaignVariables(index,spaceId?.spaceId || 0);
+
+        // pass everything to the template
+        const response = await generateResponse(query, relevantDocs, summarizedHistory , campaignVariables);
         
         await saveConversation(mobileNumber, query, response,index);
         return NextResponse.json({ message: response }, { status: 200 });
+
     } catch (error) {
         console.error("Error processing request:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
 
+async function handleCampaignVariables(index:any,spaceId:number): Promise<CampaignVariables>{
+    const cacheKey = `campaign${spaceId}`;
+    
+    //If already present , just return
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+
+    // else get from vec db first
+    const campaignVariables = fetchCampaignDataFromVectorDB(index,spaceId)
+    
+    //now store in redis then return
+    await redis.set(cacheKey, JSON.stringify(campaignVariables), "EX", 7200);
+
+    return campaignVariables;
+}
+
+
+async function fetchCampaignDataFromVectorDB(index:any , spaceId: number): Promise<CampaignVariables> {
+  try {
+    
+    const queryResponse = await index.namespace("variables").query({
+      filter: {source: "variables",},
+      topK: 1,
+      includeMetadata: true,
+      // Since values array is empty, we need an alternative approach:
+      // 1. Either provide a dummy vector of the right dimension
+      // 2. Or use Pinecone's metadata-only query if available
+      vector: new Array(1536).fill(0), // Dummy vector (adjust dimension as needed)
+    });
+    
+    // Check if we got any matches
+    if (queryResponse.matches && queryResponse.matches.length > 0 && queryResponse.matches[0].metadata) {
+        const metadata = queryResponse.matches[0].metadata;
+      
+        // Convert the metadata to our CampaignVariables format
+        return {
+          campaignName: metadata.campaignName || "",
+          campaignType: metadata.campaignType || "",
+          overrideCompany: metadata.overrideCompany || "",
+          personaName: metadata.personaName || "",
+          jobRole: metadata.jobRole || "",
+          campaignObjective: metadata.campaignObjective || "",
+          communicationStyles: metadata.communicationStyles || "",
+          initialMessage: metadata.initialMessage || "",
+          followUpMessage: metadata.followUpMessage || ""
+        };
+    }
+    
+    return {
+      campaignName: "Default Campaign",
+      campaignType: "Standard",
+      overrideCompany: "",
+      personaName: "AI Assistant",
+      jobRole: "Customer Support",
+      campaignObjective: "Assist customers",
+      communicationStyles: "Friendly, Professional",
+      initialMessage: "Hello! How can I help you today?",
+      followUpMessage: "Is there anything else you'd like assistance with?"
+    };
+
+  } catch (error) {
+    console.error("Error fetching campaign data from vector DB:", error);
+    // Return default values if there's an error
+    return {
+      campaignName:  "Default Campaign",
+      campaignType: "Standard",
+      overrideCompany: "",
+      personaName: "AI Assistant",
+      jobRole: "Customer Support",
+      campaignObjective: "Assist customers",
+      communicationStyles: "Friendly, Professional",
+      initialMessage: "Hello! How can I help you today?",
+      followUpMessage: "Is there anything else you'd like assistance with?"
+    };
+  }
+}
 
 async function saveConversation(mobileNumber: string, query: string, response: string, index : any): Promise<void> {
     try {
-      
-  
       // Generate embeddings for the conversation
       const embedding = await embeddingModel.embedQuery(query);
   
@@ -107,7 +199,7 @@ async function fetchConversationHistory(mobileNumber: string , index:any): Promi
     }
 }
 
-async function similaritySearch(query: string, namespace:string,index:any) {
+async function similaritySearch(query: string, namespace:string ,index:any) {
     try {
 
         const queryEmbedding  = await embeddingModel.embedQuery(query)
@@ -143,7 +235,7 @@ async function similaritySearch(query: string, namespace:string,index:any) {
 }
 
 
-async function generateResponse(query: string, context: string, history: string): Promise<string> {
+async function generateResponse(query: string, context: string, history: string , campaignVariables:CampaignVariables): Promise<string> {
     try {
       // Combine conversation history and context
       const fullContext = `

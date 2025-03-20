@@ -9,7 +9,20 @@ import { StringOutputParser } from "@langchain/core/output_parsers";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import redis from "@/clients/redis";
 
+
+export interface CampaignVariables {
+  campaignName: string;
+  campaignType: string;
+  overrideCompany: string;
+  personaName: string;
+  jobRole: string;
+  campaignObjective: string;
+  communicationStyles: string;
+  initialMessage: string;
+  followUpMessage: string;
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -20,28 +33,30 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Query is required" }, { status: 400 });
         }
 
-        const spaceId = 8
+        const spaceId = 9
         const mobileNumber= "9445422734"
-        const productIndexName="productdata"+spaceId;
-        const productIndex = pc.index(productIndexName);
-        const customerIndexName="customerdata"+spaceId;
-        const customerIndex = pc.index(customerIndexName);
+        const indexName="campaign"+spaceId;
+        const index = pc.index(indexName , `https://${indexName}-${process.env.PINECONE_URL}`);
+
 
         console.log(1)
-        const pastConversations = await fetchConversationHistory(query,mobileNumber,customerIndex);
+        const pastConversations = await fetchConversationHistory(query,mobileNumber,index);
         console.log(2)
         
         // const summarizedHistory = await summarizeConversation(pastConversations);
         const combinedConversations = pastConversations.join("\n");
         console.log(3)
         
-        const relevantDocs = await similaritySearch(query, productIndex);
+        const relevantDocs = await similaritySearch(query, index);
         console.log(4)
         
-        const response = await generateResponse(query,relevantDocs,combinedConversations );
+        const campaignVariables = await handleCampaignVariables(index,spaceId || 0);
+
+
+        const response = await generateResponse(query,relevantDocs,combinedConversations ,campaignVariables);
         console.log(5)
         
-        await saveConversation(mobileNumber, query, response,customerIndex);
+        await saveConversation(mobileNumber, query, response,index);
         console.log(6)
 
         return NextResponse.json({ message: response }, { status: 200 });
@@ -127,6 +142,84 @@ async function fetchConversationHistory(query:string , mobileNumber: string , in
       console.error("Error fetching conversation history:", error);
       return [];
     }
+}
+
+async function handleCampaignVariables(index:any,spaceId:number): Promise<CampaignVariables>{
+  const cacheKey = `campaign${spaceId}`;
+  
+  //If already present , just return
+  const cachedData = await redis.get(cacheKey);
+  if (cachedData) {
+    return JSON.parse(cachedData);
+  }
+
+  // else get from vec db first
+  const campaignVariables = fetchCampaignDataFromVectorDB(index,spaceId)
+  
+  //now store in redis then return
+  await redis.set(cacheKey, JSON.stringify(campaignVariables), "EX", 7200);
+
+  return campaignVariables;
+}
+
+async function fetchCampaignDataFromVectorDB(index:any , spaceId: number): Promise<CampaignVariables> {
+  try {
+    
+    const queryResponse = await index.namespace("variables").query({
+      filter: {source: "variables",},
+      topK: 1,
+      includeMetadata: true,
+      // Since values array is empty, we need an alternative approach:
+      // 1. Either provide a dummy vector of the right dimension
+      // 2. Or use Pinecone's metadata-only query if available
+      vector: new Array(1536).fill(0), // Dummy vector (adjust dimension as needed)
+    });
+    
+    // Check if we got any matches
+    if (queryResponse.matches && queryResponse.matches.length > 0 && queryResponse.matches[0].metadata) {
+        const metadata = queryResponse.matches[0].metadata;
+      
+        // Convert the metadata to our CampaignVariables format
+        return {
+          campaignName: metadata.campaignName || "",
+          campaignType: metadata.campaignType || "",
+          overrideCompany: metadata.overrideCompany || "",
+          personaName: metadata.personaName || "",
+          jobRole: metadata.jobRole || "",
+          campaignObjective: metadata.campaignObjective || "",
+          communicationStyles: metadata.communicationStyles || "",
+          initialMessage: metadata.initialMessage || "",
+          followUpMessage: metadata.followUpMessage || ""
+        };
+    }
+    
+    return {
+      campaignName: "Default Campaign",
+      campaignType: "Standard",
+      overrideCompany: "",
+      personaName: "AI Assistant",
+      jobRole: "Customer Support",
+      campaignObjective: "Assist customers",
+      communicationStyles: "Friendly, Professional",
+      initialMessage: "Hello! How can I help you today?",
+      followUpMessage: "Is there anything else you'd like assistance with?"
+    };
+
+  } catch (error) {
+    console.error("Error fetching campaign data from vector DB:", error);
+    // Return default values if there's an error
+    return {
+      campaignName:  "Default Campaign",
+      campaignType: "Standard",
+      overrideCompany: "",
+      personaName: "AI Assistant",
+      jobRole: "Customer Support",
+      campaignObjective: "Assist customers",
+      communicationStyles: "Friendly, Professional",
+      initialMessage: "Hello! How can I help you today?",
+      followUpMessage: "Is there anything else you'd like assistance with?"
+    };
+  }
 }
 
 async function similaritySearch(query: string, index:any) {
@@ -271,7 +364,7 @@ async function summarizeConversation(query: string, response: string): Promise<s
 
 
 
-async function generateResponse(query: string, context: string, history: string): Promise<string> {
+async function generateResponse(query: string, context: string, history: string,campaignVariable:CampaignVariables): Promise<string> {
   try {
     // Combine conversation history and context
     const fullContext = `

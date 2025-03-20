@@ -8,7 +8,6 @@ interface Props {
 
 export default function UploadPage({ params }: Props) {
   const { spaceId } = params
-
   redirect(`/dashboard/${spaceId}/upload/campaignData`)
 }
 

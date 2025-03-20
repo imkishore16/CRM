@@ -16,10 +16,9 @@ import { promises as fs } from "fs";
 import { randomUUID, UUID } from "crypto";
 
 interface Map{
-  key :string, // promos or link
-  value :string // information
+  key :string, // description
+  value :string // prromo / link
 }
-
 
 export async function POST(req: NextRequest) {
     try {
@@ -54,17 +53,15 @@ export async function POST(req: NextRequest) {
             const communicationStyles = JSON.parse(communicationStylesString) as string[];
 
             const campaignFlowFile = formData.get("campaignFlow") as File; //not needed for now
-            const productLinks = formData.get("productLinks") as File;
+            const productLinksFile = formData.get("productLinks") as File;
             const initialMessageFile = formData.get("initialMessage") as File; 
             const followUpMessageFile = formData.get("followUpMessage") as File;
-
-            // need to parse the productLinks
             
             try {
                 const campaignFlow = await readFileContent(campaignFlowFile);
                 const initialMessage = await readFileContent(initialMessageFile);
                 const followUpMessage = await readFileContent(followUpMessageFile);
-
+                
                 const vector = {
                   id: randomUUID(),
                   values: [],
@@ -84,6 +81,7 @@ export async function POST(req: NextRequest) {
                   },
                   source:"variables"
                 }
+
                 await index.namespace("variables").upsert([vector]);
             } catch (error) {
                 console.error(`Error embedding campaing data`, error);
@@ -91,6 +89,28 @@ export async function POST(req: NextRequest) {
                     { message: `Error embedding campaing data: ${error}` },
                     { status: 500 }
                 );
+            }
+
+            try {
+              const productLinks = await readFileContent(productLinksFile);
+              const links = parseLinksFromFile(productLinks);
+              console.log(links);
+              const vectors = await Promise.all(
+                links.map(async (item) => {
+                  const embedding = await embeddingModel.embedQuery(item.key);
+
+                  return{
+                    id: `promo_${Date.now()}_${Math.random()}`, // Unique ID
+                    values: embedding, // Store embeddings
+                    metadata: { key: item.key, text: item.value }, 
+                  }
+                })
+              )
+              await index.namespace("links").upsert(vectors);
+              console.log("Successfully uploaded to Pinecone.");
+            }
+            catch (error){
+              console.error("Error uploading to Pinecone:" ,error);
             }
             
         }
@@ -153,12 +173,12 @@ export async function POST(req: NextRequest) {
           try {
             const vectors = await Promise.all(
               links.map(async (item) => {
-                const embedding =await embeddingModel.embedQuery(item.value); // value is the description
+                const embedding =await embeddingModel.embedQuery(item.key); // key is the description
 
                 return{
                   id: `promo_${Date.now()}_${Math.random()}`, // Unique ID
                   values: embedding, // Store embeddings
-                  metadata: { key: item.key, text: item.value }, 
+                  metadata: { key: item.key, value: item.value }, 
                 }
               })
             )
@@ -180,12 +200,12 @@ export async function POST(req: NextRequest) {
             try {
               const vectors = await Promise.all(
                 links.map(async (item) => {
-                  const embedding = await embeddingModel.embedQuery(item.value);
+                  const embedding = await embeddingModel.embedQuery(item.key);
 
                   return{
                     id: `promo_${Date.now()}_${Math.random()}`, // Unique ID
                     values: embedding, // Store embeddings
-                    metadata: { key: item.key, text: item.value }, 
+                    metadata: { key: item.key, value: item.value }, 
                   }
                 })
               )
@@ -286,8 +306,8 @@ async function embedCustomerData(file: File, index: any,spaceId : string,campaig
             data: {
                 spaceId: parseInt(spaceId, 10),
                 mobileNumber: mobileNumber,
-                campaignId : parseInt(campaignId, 10),
-                status : false
+                // campaignId : parseInt(campaignId, 10),
+                // status : false
             },
         });
 
@@ -476,9 +496,6 @@ function parseLinksFromFile(content: string):Map[] {
   
   return linkArray;
 }
-
-
-
 
 
 async function embedCustomProductData2(file: File, index: any): Promise<any> {

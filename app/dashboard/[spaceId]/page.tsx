@@ -1,10 +1,12 @@
+import {use} from "react"
 
-type Props = {
-  params: { spaceId: number };
-};
+interface DashboardProps {
+  params: Promise<{ spaceId: string }>;
+}
 
-export default function Dashboard({params}:Props) {
-  const { spaceId } = params; 
+export default function Dashboard({params}:DashboardProps) {
+  const unwrappedParams = use(params)
+  const { spaceId } = unwrappedParams
 
   return (
     <div className="flex">
