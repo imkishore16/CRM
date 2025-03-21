@@ -5,12 +5,14 @@ import { use } from "react";
 import { LayoutDashboard, User, Settings, BarChart, FileText, HelpCircle } from "lucide-react";
 
 interface Props {
-  params: { spaceId: string };
+  params: Promise<{
+    spaceId: string
+  }>
 }
-
 export default async function Overview({ params }: Props) {
-  const spaceId = params.spaceId;
   
+  const unwrappedParams = use(params)
+  const { spaceId } = unwrappedParams
   const tableData = [
     { id: 1, title: "Set Target Users", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
     { id: 2, title: "Product links", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
@@ -26,7 +28,7 @@ export default async function Overview({ params }: Props) {
       <main className="container mx-auto py-10 px-4">
         <div>overview</div>
         <div>This page will consist of the product data and customer data, and allows user to add additional data like promos and links</div>
-        <div>It also contains details such as user didn't respond and when clicked on a user it displays their text, need to store it in DB or vecDB?</div>
+        <div>It also contains details such as user didnt respond and when clicked on a user it displays their text, need to store it in DB or vecDB?</div>
         
         <h1 className="text-2xl font-bold mb-6">Data Overview Menu</h1>
         <div className="max-w-md">

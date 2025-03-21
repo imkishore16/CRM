@@ -1,9 +1,10 @@
 import { NextResponse,NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import twilioClient from "@/clients/twilioClient";
-
+import redis from "@/clients/redis";
 import { Queue } from "bull";
 import Bull from "bull";
+import { CampaignVariables } from "../chat/route";
 
 const campaignQueue = new Bull("campaign");
 const job = await campaignQueue.add({
@@ -13,17 +14,19 @@ const job = await campaignQueue.add({
   },
 });
 
-// start the campaign , ie run a cron job to send messages to everyone
+// start the campaign , ie run a message queue that will send messages to everyone
 export async function POST(req:NextRequest){
   try {
-      const { campaignId, message } = await req.json();
+    const { searchParams } = new URL(req.url);
+
+    const spaceId = searchParams.get("spaceId") ?? "" ; 
   
       // Fetch mobile numbers for the campaign
-      const mobileNumbers = await fetchMobileNumbers(campaignId);
+      const mobileNumbers = await fetchMobileNumbers(parseInt(spaceId));
   
       // Send the first message to each mobile number
       for (const mobileNumber of mobileNumbers) {
-        await sendFirstMessage(mobileNumber, message);
+        await sendFirstMessage(mobileNumber,parseInt(spaceId));
       }
   
       return NextResponse.json({ success: true });
@@ -33,23 +36,18 @@ export async function POST(req:NextRequest){
   }
 }
 
-async function callChatAPI(mobileNumber: string, userMessage: string): Promise<string> {
-    // Call your existing chat API
-    const res = await fetch("http://localhost:3000/api/sampleChat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mobileNumber, query: userMessage }),
-    });
-    const data = await res.json();
-    return data.message;
-  }
 
-async function sendFirstMessage(mobileNumber: string, message: string): Promise<void> {
+async function sendFirstMessage(mobileNumber: string,spaceId:number): Promise<void> {
+  const campaignVariables = await redis.get(`campaign${spaceId}`)
+  const parsedCampaignVariables: CampaignVariables | null = campaignVariables 
+  ? (JSON.parse(campaignVariables) as CampaignVariables) 
+  : null;
+  const initialMessage = parsedCampaignVariables?.initialMessage;
     try {
       await twilioClient.messages.create({
-          from: "whatsapp:+14155238886", // Twilio's WhatsApp sandbox number
+          from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
           to: `whatsapp:${mobileNumber}`,
-          body: message,
+          body: initialMessage,
         });
       console.log(`Message sent to ${mobileNumber}`);
     } catch (error) {
@@ -57,17 +55,17 @@ async function sendFirstMessage(mobileNumber: string, message: string): Promise<
     }
   }
 
-async function fetchMobileNumbers(campaignId: number): Promise<string[]> {
+async function fetchMobileNumbers(spaceId: number): Promise<string[]> {
     const customers = await prisma.spaceCustomer.findMany({
-      where: { campaignId },
+      where: { spaceId },
       select: { mobileNumber: true },
     });
     return customers.map((customer:any) => customer.mobileNumber);
 }
 
-async function updateCampaignStatus(mobileNumber: string, campaignId: number): Promise<void> {
-    await prisma.spaceCustomer.updateMany({
-      where: { mobileNumber, campaignId },
-      data: { status: true },
-    });
-  }
+// async function updateCampaignStatus(mobileNumber: string, campaignId: number): Promise<void> {
+//     await prisma.spaceCustomer.updateMany({
+//       where: { mobileNumber },
+//       data: { status: true },
+//     });
+// }

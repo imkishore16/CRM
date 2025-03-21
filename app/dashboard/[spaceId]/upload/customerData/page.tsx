@@ -2,18 +2,19 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState,use } from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { Upload, X, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface CustomerDataProps {
-  params: { spaceId: string }
+  params: Promise<{ spaceId: string }>
 }
 
 export default function CustomerDataPage({ params }: CustomerDataProps) {
-  const { spaceId } = params
+  const unwrappedParams = use(params)
+  const { spaceId } = unwrappedParams
   const { toast } = useToast()
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)

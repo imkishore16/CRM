@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
     const customerIndex = pc.index(customerIndexName, `https://${customerIndexName}${process.env.PINECONE_URL}`);
 
     const pineconeResults = await Promise.all( 
-        customers.map(async (mobileNumber:string) => {
+        customers.map(async (customer: { mobileNumber: string }) => {
+          const { mobileNumber } = customer;
           const queryResult = await customerIndex.namespace("customerdata").fetch([mobileNumber]);
           const record = queryResult.records?.[mobileNumber];
           return {

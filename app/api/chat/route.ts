@@ -72,6 +72,8 @@ export async function POST(req: NextRequest) {
     }
 }
 
+
+
 async function handleCampaignVariables(index:any,spaceId:number): Promise<CampaignVariables>{
     const cacheKey = `campaign${spaceId}`;
     

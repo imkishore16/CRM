@@ -28,6 +28,8 @@ export async function POST(req: NextRequest) {
     try {
         const data = await req.json();
         const query = data.query as string;
+        const  to = data.to as string;     
+        const  message  = data.body as string;     
 
         if (!query) {
             return NextResponse.json({ error: "Query is required" }, { status: 400 });

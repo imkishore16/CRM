@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-
+import {use} from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { FileText, Users, ShoppingBag } from "lucide-react"
@@ -9,13 +9,14 @@ import { cn } from "@/lib/utils"
 
 interface UploadLayoutProps {
   children: React.ReactNode
-  params: {
+  params: Promise<{
     spaceId: string
-  }
+  }>
 }
 
 export default function UploadLayout({ children, params }: UploadLayoutProps) {
-  const { spaceId } = params
+  const unwrappedParams = use(params)
+  const { spaceId } = unwrappedParams
   const pathname = usePathname()
 
   const uploadNavItems = [

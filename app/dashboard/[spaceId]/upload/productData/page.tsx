@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState ,use} from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { Upload, X, FileText, AlertCircle } from "lucide-react"
@@ -10,11 +10,12 @@ import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface ProductDataProps {
-  params: { spaceId: string }
+  params: Promise<{ spaceId: string }>
 }
 
 export default function ProductDataPage({ params }: ProductDataProps) {
-  const { spaceId = "default" } = params
+  const unwrappedParams = use(params)
+  const { spaceId } = unwrappedParams
   const { toast } = useToast()
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)

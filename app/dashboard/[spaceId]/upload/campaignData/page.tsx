@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState ,use} from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 
 interface CampaignFormProps {
-  params: { spaceId: string }
+  params: Promise<{ spaceId: string }>
 }
+
 
 const communicationStyles = [
   { id: "formal", label: "Formal" },
@@ -36,7 +37,8 @@ const campaignTypes = [
 ]
 
 export default function CampaignDataPage({ params }: CampaignFormProps) {
-  const { spaceId = "default" } = params
+  const unwrappedParams = use(params)
+  const { spaceId } = unwrappedParams
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
 

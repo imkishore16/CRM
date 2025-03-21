@@ -2,21 +2,33 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { SignInFlow } from "@/types/auth-types";
 import AuthScreen from "@/components/auth/auth-screen";
 
-export default function AuthPage({
-  searchParams,
-}: {
-  searchParams: { authType: SignInFlow; mailId?: string };
-}) {
-  const formType = searchParams.authType;
+interface AuthPageProps {
+  searchParams: Promise<Record<string, string | undefined>>;
+}
+
+export default function AuthPage({ searchParams }: AuthPageProps) {
+  const [formType, setFormType] = useState<SignInFlow | undefined>(undefined);
   const session = useSession();
   const router = useRouter();
 
+  useEffect(() => {
+    const fetchSearchParams = async () => {
+      const params = await searchParams;
+      setFormType(params.authType as SignInFlow | undefined);
+    };
+
+    fetchSearchParams();
+  }, [searchParams]);
+
   if (session.status === "authenticated") {
-    return router.push("/");
+    router.push("/");
+    return null;
   }
+
   return <AuthScreen authType={formType} />;
 }

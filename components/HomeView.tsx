@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState,useCallback } from "react";
 import CardSkeleton from "./ui/cardSkeleton";
 import SpacesCard from "./SpacesCard";
 
@@ -39,8 +39,7 @@ export default function HomeView() {
           throw new Error(data.message || "Failed to fetch spaces");
         }
 
-        const fetchedSpaces: Space[] = data.spaces;
-        setSpaces(fetchedSpaces);
+        setSpaces(data.spaces);
       } catch (error) {
         toast.error("Error fetching spaces");
       } finally {
@@ -58,9 +57,7 @@ export default function HomeView() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          spaceName: spaceName,
-        }),
+        body: JSON.stringify({ spaceName }),
       });
       const data = await response.json();
 
@@ -68,18 +65,14 @@ export default function HomeView() {
         throw new Error(data.message || "Failed to create space");
       }
 
-      const newSpace = data.space;
-      setSpaces((prev) => {
-        const updatedSpaces: Space[] = prev ? [...prev, newSpace] : [newSpace];
-        return updatedSpaces;
-      });
-      toast.success(data.message); 
+      setSpaces((prev) => (prev ? [...prev, data.space] : [data.space]));
+      toast.success(data.message);
     } catch (error: any) {
-      toast.error(error.message || "Error Creating Space"); 
+      toast.error(error.message || "Error Creating Space");
     }
   };
 
-  const handleDeleteSpace = async (spaceId: number) => {
+  const handleDeleteSpace = useCallback(async (spaceId: number) => {
     try {
       const response = await fetch(`/api/spaces/?spaceId=${spaceId}`, {
         method: "DELETE",
@@ -89,17 +82,13 @@ export default function HomeView() {
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Failed to delete space");
       }
-      setSpaces((prev) => {
-        const updatedSpaces: Space[] = prev
-          ? prev.filter((space) => space.id !== spaceId)
-          : [];
-        return updatedSpaces;
-      });
+
+      setSpaces((prev) => prev?.filter((space) => space.id !== spaceId) || []);
       toast.success(data.message);
     } catch (error: any) {
-      toast.error(error.message || "Error Deleting Space"); 
+      toast.error(error.message || "Error Deleting Space");
     }
-  };
+  }, []);
 
   const renderSpaces = useMemo(() => {
     if (loading) {
@@ -115,15 +104,17 @@ export default function HomeView() {
       );
     }
 
-    if (spaces && spaces.length > 0) {
-      return spaces.map((space) => (
-        <SpacesCard
-          key={space.id}
-          space={space}
-          handleDeleteSpace={handleDeleteSpace}
-        />
-      ));
+    if (!spaces || spaces.length === 0) {
+      return <p className="text-center text-gray-500">No spaces found.</p>;
     }
+
+    return spaces.map((space) => (
+      <SpacesCard
+        key={space.id}
+        space={space}
+        handleDeleteSpace={handleDeleteSpace}
+      />
+    ));
   }, [loading, spaces, handleDeleteSpace]);
 
   return (

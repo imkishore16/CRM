@@ -9,13 +9,14 @@ const NavItems = (spaceId: string) => [
   { name: "Dashboard", href: `/dashboard/${spaceId}`, icon: LayoutDashboard },
   { name: "Overview", href: `/dashboard/${spaceId}/overview`, icon: User },
   { name: "Upload Data", href: `/dashboard/${spaceId}/upload`, icon: Settings },
+  { name: "Start Campaign", href: `/dashboard/${spaceId}/campaign`, icon: Settings },
 ];
 
 interface DashboardLayoutProps {
   children: ReactNode;
   params: Promise<{
-    spaceId: string;
-  }>;
+    spaceId: string
+  }>
 }
 
 export default function DashboardLayout({ children, params }: DashboardLayoutProps) {
