@@ -37,7 +37,7 @@ export const authOptions = {
         if (!passwordValidation.success) {
           throw new Error(passwordValidation.error.issues[0].message);
         }
-
+        
         try {
           const user = await prisma.user.findUnique({
             where: { email: emailValidation.data },

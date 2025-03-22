@@ -43,9 +43,9 @@ const nextConfig = {
       }
       return config;
     },
-    experimental: {
-      serverComponentsExternalPackages: ["pdf-parse"],
-    },
+    // experimental: {
+    //   serverComponentsExternalPackages: ["pdf-parse"],
+    // },
     images: {
       remotePatterns: [
         {
