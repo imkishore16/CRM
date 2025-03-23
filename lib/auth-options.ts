@@ -135,7 +135,9 @@ export const authOptions: NextAuthOptions = {
     },
     async signIn({ account, profile }) {
       try {
+        console.log("Signin pagee")
         if (account?.provider === "google" || account?.provider === "spotify") {
+          console.log("hererehediasjkdjk")
           if (!profile?.email) {
             throw new Error("Email is required");
           }
@@ -143,7 +145,6 @@ export const authOptions: NextAuthOptions = {
           const user = await prisma.user.findUnique({
             where: { email: profile.email },
           });
-
           if (!user) {
             await prisma.user.create({
               data: {

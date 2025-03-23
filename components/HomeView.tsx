@@ -29,7 +29,7 @@ export default function HomeView() {
     const fetchSpaces = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch("/api/spaces", {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/api/spaces`, {
           method: "GET",
         });
 
@@ -52,7 +52,7 @@ export default function HomeView() {
   const handleCreateSpace = async () => {
     setIsCreateSpaceOpen(false);
     try {
-      const response = await fetch(`/api/spaces`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/api/spaces`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

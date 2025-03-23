@@ -24,25 +24,37 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
     
-    const space = await prisma.space.create({
-      data: {
-        name: data.spaceName,
-        userId: session.user.id,
-      },
+    // Use a transaction to ensure database consistency
+    const result = await prisma.$transaction(async (prismaClient) => {
+      // Create the space
+      const space = await prismaClient.space.create({
+        data: {
+          name: data.spaceName,
+          userId: session.user.id,
+        },
+      });
+      
+      const spaceId = space.id;
+      const indexName = "campaign" + spaceId;
+      
+      try {
+        // Initialize PineCone DB
+        await initializePineConeDB(indexName);
+      } catch (pineconeError) {
+        // If PineCone initialization fails, throw an error to trigger transaction rollback
+        throw new Error(`Failed to initialize PineCone index: ${pineconeError}`);
+      }
+      
+      return space;
     });
-
-    const spaceId=space.id
-    //when a user creates a space the pinecone indices must be created , product data , conversation data etcc
-    const indexName = "campaign" + spaceId;
-    await initializePineConeDB(indexName)
     
     return NextResponse.json(
-      { success: true, message: "Space created successfully", space },
+      { success: true, message: "Space created successfully", space: result },
       { status: 201 }
     );
   } catch (error: any) {
+    console.error("Error creating space:", error);
     
     if (error.message === "Unauthenticated Request") {
       return NextResponse.json(
@@ -51,6 +63,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (error.message.includes("Failed to initialize PineCone index")) {
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 500 }
+      );
+    }
     
     return NextResponse.json(
       { success: false, message: `An unexpected error occurred: ${error.message}` },
@@ -58,7 +76,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
 
 export async function GET(req: NextRequest) {
   try {

@@ -23,9 +23,8 @@ async function initializePineConeDB(indexName: string) {
               cloud: 'aws', 
               region: 'us-east-1' 
               }
-          } 
+          }
       });
-      await pc.index(indexName).describeIndexStats();
       return pc.index(indexName);
 
     } catch (error) {

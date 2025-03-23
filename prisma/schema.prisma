@@ -1,51 +1,38 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      =  env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// this is the orgasnization/a sales person and not the customer
 model User {
-  id        Int   @id @default(autoincrement())
-  name      String?
-  provider String
+  id               Int      @id @default(autoincrement())
+  name             String?
+  provider         String
   organizationName String?
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
-  avatar    String?
-
-  createdSpaces Space[]  @relation("createdBy")
-
-  createdAt DateTime @default(now()) @db.Timestamp(3)
-  updatedAt DateTime @updatedAt @db.Timestamp(3)
+  email            String   @unique
+  password         String
+  role             Role     @default(USER)
+  avatar           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdSpaces    Space[]  @relation("createdBy")
 }
 
-model Space{
-  id Int @id @default(autoincrement())
-  name String
-  userId Int 
-  user User @relation("createdBy", fields: [userId], references: [id])
+model Space {
+  id     Int    @id @default(autoincrement())
+  name   String
+  userId Int
+  user   User   @relation("createdBy", fields: [userId], references: [id])
 }
 
-//each space takes in a some type of document that consists of the user data and the mobile numbers and names are stored in the database
-
-
-//a tertiary table to store all customers (ie mobile numbner) of a merchant
-
-model SpaceCustomer{
-  id Int @id @default(autoincrement())
-  spaceId Int 
+model SpaceCustomer {
+  id           Int    @id @default(autoincrement())
+  spaceId      Int
   mobileNumber String
-  // campaignId Int
-  // status CampaignStatus
 }
 
 enum Role {
@@ -55,7 +42,7 @@ enum Role {
 }
 
 enum CampaignStatus {
-  NOT_STARTED // 0
-  ONGOING     // 1
-  COMPLETED   // 2
+  NOT_STARTED
+  ONGOING
+  COMPLETED
 }

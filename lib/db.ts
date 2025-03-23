@@ -15,9 +15,10 @@ const globalForPrisma = globalThis as unknown as GlobalPrisma;
 // Use existing Prisma instance if available, otherwise create a new one
 const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-export default prisma;
 
 // In development, store the Prisma instance in globalThis to prevent multiple instances
 if (process.env.NODE_ENV !== "production") {
     globalForPrisma.prisma = prisma;
 }
+
+export default prisma;
