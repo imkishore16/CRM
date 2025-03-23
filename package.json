@@ -4,16 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma generate && next build",
+    "build": "npx prisma generate && npx prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "prisma:studio": "npx prisma studio",
     "prisma:migrate": "prisma migrate dev",
-    "postinstall": "prisma generate"
+    "postinstall": "npx prisma generate && npx prisma migrate deploy"
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
     "@google/generative-ai": "^0.22.0",
+    "@huggingface/inference": "^2.1.0",
     "@langchain/community": "^0.3.34",
     "@langchain/core": "^0.3.38",
     "@langchain/google-genai": "^0.1.10",
@@ -33,7 +34,6 @@
     "@types/formidable": "^3.4.5",
     "app": "file:",
     "axios": "^1.7.5",
-    "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "bull": "^4.16.5",
     "cheerio": "^1.0.0",
@@ -90,5 +90,8 @@
     "prisma": "^6.2.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "resolutions": {
+    "@huggingface/inference": "^2.1.0"
   }
 }

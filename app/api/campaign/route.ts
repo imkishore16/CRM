@@ -6,13 +6,13 @@ import { Queue } from "bull";
 import Bull from "bull";
 import { CampaignVariables } from "../chat/route";
 
-const campaignQueue = new Bull("campaign");
-const job = await campaignQueue.add({
-  redis: {
-    host: "localhost",
-    port: 6379,
-  },
-});
+// const campaignQueue = new Bull("campaign");
+// const job = await campaignQueue.add({
+//   redis: {
+//     host: "localhost",
+//     port: 6379,
+//   },
+// });
 
 // start the campaign , ie run a message queue that will send messages to everyone
 export async function POST(req:NextRequest){
