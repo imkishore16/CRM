@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import pc from "@/clients/pinecone";
-import { OpenAI } from "@langchain/openai";
 import llm from "@/clients/llm";
 import embeddingModel from "@/clients/embeddingModel";
 import prisma from "@/lib/db";
 import { HuggingFaceInference } from "@langchain/community/llms/hf"; // For Hugging Face LLM
-import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf"; // For Hugging Face embeddings
-import { RetrievalQAChain } from "langchain/chains";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import { reservationsUrl } from "twilio/lib/jwt/taskrouter/util";
 import redis from "@/clients/redis";
 
 export interface CampaignVariables {

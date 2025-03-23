@@ -1,40 +1,37 @@
-import { authOptions } from "@/lib/auth-options";
-import { getServerSession } from "next-auth";
-import ClickableTable from "@/components/clickable-table";
-import { use } from "react";
-import { LayoutDashboard, User, Settings, BarChart, FileText, HelpCircle } from "lucide-react";
+"use client"
 
-interface Props {
+import { use } from "react"
+import ClickableTable from "@/components/clickable-table"
+
+interface OverviewPageProps {
   params: Promise<{
     spaceId: string
   }>
 }
-export default async function Overview({ params }: Props) {
-  
+
+export default function OverviewPage({ params }: OverviewPageProps) {
+  // Unwrap the params Promise using the use hook
   const unwrappedParams = use(params)
   const { spaceId } = unwrappedParams
+
+  console.log("spaceId : ", spaceId)
+
   const tableData = [
     { id: 1, title: "Set Target Users", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
-    { id: 2, title: "Product links", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
-    { id: 3, title: "Platforms", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
-    { id: 4, title: "Campaign Details", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
-    { id: 5, title: "Promo Codes", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
-    { id: 6, title: "View product data", href: `/dashboard/${spaceId}/overview/viewProductData`},
+    { id: 2, title: "Set Target Personas", href: `/dashboard/${spaceId}/overview/setTargetPersonas` },
+    { id: 3, title: "Set Target Companies", href: `/dashboard/${spaceId}/overview/setTargetCompanies` },
+    { id: 4, title: "Set Target Regions", href: `/dashboard/${spaceId}/overview/setTargetRegions` },
   ]
-  
+
   return (
-    <div>
-      
-      <main className="container mx-auto py-10 px-4">
-        <div>overview</div>
-        <div>This page will consist of the product data and customer data, and allows user to add additional data like promos and links</div>
-        <div>It also contains details such as user didnt respond and when clicked on a user it displays their text, need to store it in DB or vecDB?</div>
-        
-        <h1 className="text-2xl font-bold mb-6">Data Overview Menu</h1>
-        <div className="max-w-md">
-          <ClickableTable items={tableData} />
-        </div>
-      </main>
+    <div className="container mx-auto py-10 px-4">
+      <h1 className="text-2xl font-bold mb-6">Overview</h1>
+      <p className="mb-8">Select an option below to configure your campaign settings.</p>
+
+      <div className="max-w-2xl">
+        <ClickableTable items={tableData} />
+      </div>
     </div>
-  );
+  )
 }
+

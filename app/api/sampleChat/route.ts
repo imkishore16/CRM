@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import pc from "@/clients/pinecone";
-import { OpenAI } from "@langchain/openai";
 import llm from "@/clients/llm";
 import embeddingModel from "@/clients/embeddingModel";
-import prisma from "@/lib/db";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import redis from "@/clients/redis";
 

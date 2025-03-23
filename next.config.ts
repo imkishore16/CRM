@@ -24,6 +24,7 @@ const nextConfig: NextConfig = {
     ],  
         domains: ['images.unsplash.com','i.ytimg.com'],
     },
+
 };
 
 export default nextConfig;

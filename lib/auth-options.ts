@@ -2,17 +2,16 @@ import { NextAuthOptions, Session } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { PrismaClient } from "@prisma/client";
-import { PrismaClientInitializationError } from "@prisma/client/runtime/library";
 import bcrypt from "bcrypt";
 import { z } from "zod";
-
-const prisma = new PrismaClient();
+import prisma from "./db";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
 
 const emailSchema = z.string().email();
 const passwordSchema = z.string().min(8);
 
 export const authOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
