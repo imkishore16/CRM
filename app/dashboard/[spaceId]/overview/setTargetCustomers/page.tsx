@@ -111,7 +111,7 @@ export default function SetTargetCustomersForm() {
         setRows([{ id: crypto.randomUUID(), mobile: "", text: "" }])
 
         // Refresh customer data after successful submission
-        const res = await fetch(`http://localhost:3000/api/customers?spaceId=${spaceId}`, {
+        const res = await fetch(`${process.env.NEXTAUTH_URL}/api/customers?spaceId=${spaceId}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         })

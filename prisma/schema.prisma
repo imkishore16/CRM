@@ -8,6 +8,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      =  env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // this is the orgasnization/a sales person and not the customer
