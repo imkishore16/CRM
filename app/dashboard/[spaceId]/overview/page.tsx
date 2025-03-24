@@ -18,7 +18,6 @@ export default function OverviewPage({ params }: OverviewPageProps) {
 
   const tableData = [
     { id: 1, title: "Set Target Users", href: `/dashboard/${spaceId}/overview/setTargetCustomers` },
-    { id: 2, title: "Set Target Personas", href: `/dashboard/${spaceId}/overview/setTargetPersonas` },
     { id: 3, title: "Set Target Companies", href: `/dashboard/${spaceId}/overview/setTargetCompanies` },
     { id: 4, title: "Set Target Regions", href: `/dashboard/${spaceId}/overview/setTargetRegions` },
   ]

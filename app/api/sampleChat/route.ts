@@ -27,10 +27,6 @@ async function parseFormEncodedBody(req: NextRequest) {
 
 export async function POST(req: NextRequest ) {
     try {
-        // const data = await parseFormEncodedBody(req); 
-        // console.log("Received Twilio payload:", data);
-        // const mobileNumber = data.From?.replace("whatsapp:", "");
-        // const query = data.Body; 
         const data= await req.json();
         const query = data.query as string;
         const mobileNumber="9445422734"
@@ -45,14 +41,15 @@ export async function POST(req: NextRequest ) {
 
         console.log(1)
         const pastConversations = await fetchConversationHistory(query,mobileNumber,index);
+        console.log("pastConversations : " , pastConversations)
         console.log(2)
         
         // const summarizedHistory = await summarizeConversation(pastConversations);
         const combinedConversations = pastConversations.join("\n");
-        console.log(3)
+        console.log("combinedConversations : " , combinedConversations)
         
         const relevantDocs = await similaritySearch(query, index);
-        console.log(4)
+        console.log("relevantDocs : ", relevantDocs)
         
         const campaignVariables = await handleCampaignVariables(index,spaceId || 9);
 
@@ -62,11 +59,6 @@ export async function POST(req: NextRequest ) {
         await saveConversation(mobileNumber, query, response,index);
         console.log(6)
 
-        // await twilioClient.messages.create({
-        //   body: response,
-        //   from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, // Your Twilio WhatsApp number
-        //   to: `whatsapp:${mobileNumber}` // Add the whatsapp: prefix back
-        // });
 
       return NextResponse.json({ message: response }, { status: 200 });
     } catch (error) {
@@ -187,11 +179,11 @@ async function handleCampaignVariables(index:any,spaceId:number): Promise<Campai
   const cacheKey = `campaign${spaceId}`;
   
   //If already present , just return
-  // const cachedData = await redis.get(cacheKey);
-  // if (cachedData) {
-  //   console.log("cachedData :" , cachedData)
-  //   return JSON.parse(cachedData);
-  // }
+  const cachedData = await redis.get(cacheKey);
+  if (cachedData) {
+    console.log("cachedData :" , cachedData)
+    return JSON.parse(cachedData);
+  }
 
   // else get from vec db first
   const campaignVariables =await fetchCampaignDataFromVectorDB(index,spaceId)
@@ -204,54 +196,139 @@ async function handleCampaignVariables(index:any,spaceId:number): Promise<Campai
   return campaignVariables;
 }
 
-async function fetchCampaignDataFromVectorDB(index:any , spaceId: number): Promise<CampaignVariables> {
-  try {
+// async function fetchCampaignDataFromVectorDB(index:any , spaceId: number): Promise<CampaignVariables> {
+//   try {
     
-    const queryResponse = await index.namespace("variables").query({
-      filter: {source: "variables",},
-      topK: 1,
-      includeMetadata: true,
-      // Since values array is empty, we need an alternative approach:
-      // 1. Either provide a dummy vector of the right dimension
-      // 2. Or use Pinecone's metadata-only query if available
-      vector: new Array(384).fill(0), // Dummy vector (adjust dimension as needed)
-    });
+//     const queryResponse = await index.namespace("variables").query({
+//       filter: {source: "variables",},
+//       topK: 1,
+//       includeMetadata: true,
+//       // Since values array is empty, we need an alternative approach:
+//       // 1. Either provide a dummy vector of the right dimension
+//       // 2. Or use Pinecone's metadata-only query if available
+//       vector: new Array(384).fill(0), // Dummy vector (adjust dimension as needed)
+//     });
     
-    // Check if we got any matches
-    if (queryResponse.matches && queryResponse.matches.length > 0 && queryResponse.matches[0].metadata) {
-        const metadata = queryResponse.matches[0].metadata;
+//     // Check if we got any matches
+//     if (queryResponse.matches && queryResponse.matches.length > 0 && queryResponse.matches[0].metadata) {
+//         const metadata = queryResponse.matches[0].metadata;
       
-        // Convert the metadata to our CampaignVariables format
-        return {
-          campaignName: metadata.campaignName || "",
-          campaignType: metadata.campaignType || "",
-          overrideCompany: metadata.overrideCompany || "",
-          personaName: metadata.personaName || "",
-          jobRole: metadata.jobRole || "",
-          campaignObjective: metadata.campaignObjective || "",
-          communicationStyles: metadata.communicationStyles || "",
-          initialMessage: metadata.initialMessage || "",
-          followUpMessage: metadata.followUpMessage || ""
-        };
+//         // Convert the metadata to our CampaignVariables format
+//         return {
+//           campaignName: metadata.campaignName || "",
+//           campaignType: metadata.campaignType || "",
+//           overrideCompany: metadata.overrideCompany || "",
+//           personaName: metadata.personaName || "",
+//           jobRole: metadata.jobRole || "",
+//           campaignObjective: metadata.campaignObjective || "",
+//           communicationStyles: metadata.communicationStyles || "",
+//           initialMessage: metadata.initialMessage || "",
+//           followUpMessage: metadata.followUpMessage || ""
+//         };
+//     }
+    
+//     return {
+//       campaignName: "Default Campaign",
+//       campaignType: "Standard",
+//       overrideCompany: "",
+//       personaName: "AI Assistant",
+//       jobRole: "Customer Support",
+//       campaignObjective: "Assist customers",
+//       communicationStyles: "Friendly, Professional",
+//       initialMessage: "Hello! How can I help you today?",
+//       followUpMessage: "Is there anything else you'd like assistance with?"
+//     };
+
+//   } catch (error) {
+//     console.error("Error fetching campaign data from vector DB:", error);
+//     // Return default values if there's an error
+//     return {
+//       campaignName:  "Default Campaign",
+//       campaignType: "Standard",
+//       overrideCompany: "",
+//       personaName: "AI Assistant",
+//       jobRole: "Customer Support",
+//       campaignObjective: "Assist customers",
+//       communicationStyles: "Friendly, Professional",
+//       initialMessage: "Hello! How can I help you today?",
+//       followUpMessage: "Is there anything else you'd like assistance with?"
+//     };
+//   }
+// }
+
+
+async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promise<CampaignVariables> {
+  try {
+    // Create a dummy vector for querying (adjust dimension as needed)
+    const dummyVector = new Array(384).fill(0);
+    
+    // Object to store our results
+    const campaignData: CampaignVariables = {
+      campaignName: "",
+      campaignType: "",
+      overrideCompany: "",
+      personaName: "",
+      jobRole: "",
+      campaignObjective: "",
+      communicationStyles: "",
+      initialMessage: "",
+      followUpMessage: ""
+    };
+    
+    // List of fields to fetch
+    const fields = [
+      "campaignName",
+      "campaignType",
+      "overrideCompany",
+      "personaName",
+      "jobRole",
+      "campaignObjective",
+      "communicationStyles",
+      "initialMessage",
+      "followUpMessage"
+    ];
+    
+    // Fetch each field individually
+    for (const field of fields) {
+      const response = await index.namespace("variables").query({
+        filter: {
+          source: { $eq: field }
+        },
+        topK: 1,
+        includeMetadata: true,
+        vector: dummyVector
+      });
+      
+      if (response.matches && response.matches.length > 0 && response.matches[0].metadata) {
+        campaignData[field as keyof CampaignVariables] = response.matches[0].metadata.value || "";
+      }
     }
     
-    return {
-      campaignName: "Default Campaign",
-      campaignType: "Standard",
-      overrideCompany: "",
-      personaName: "AI Assistant",
-      jobRole: "Customer Support",
-      campaignObjective: "Assist customers",
-      communicationStyles: "Friendly, Professional",
-      initialMessage: "Hello! How can I help you today?",
-      followUpMessage: "Is there anything else you'd like assistance with?"
-    };
-
+    // Check if we found any data at all
+    const hasData = Object.values(campaignData).some(value => value !== "");
+    
+    if (!hasData) {
+      // Return default values if no data found
+      return {
+        campaignName: "Default Campaign",
+        campaignType: "Standard",
+        overrideCompany: "",
+        personaName: "AI Assistant",
+        jobRole: "Customer Support",
+        campaignObjective: "Assist customers",
+        communicationStyles: "Friendly, Professional",
+        initialMessage: "Hello! How can I help you today?",
+        followUpMessage: "Is there anything else you'd like assistance with?"
+      };
+    }
+    
+    return campaignData;
+    
   } catch (error) {
     console.error("Error fetching campaign data from vector DB:", error);
     // Return default values if there's an error
     return {
-      campaignName:  "Default Campaign",
+      campaignName: "Default Campaign",
       campaignType: "Standard",
       overrideCompany: "",
       personaName: "AI Assistant",

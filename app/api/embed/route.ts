@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
             const communicationStylesString = formData.get('communicationStyles') as string ;
             const communicationStyles = JSON.parse(communicationStylesString) as string[];
 
-            const campaignFlowFile = formData.get("campaignFlow") as File; //not needed for now
+            const campaignFlowFile = formData.get("campaignFlow") as File; 
             const productLinksFile = formData.get("productLinks") as File;
             const initialMessageFile = formData.get("initialMessage") as File; 
             const followUpMessageFile = formData.get("followUpMessage") as File;
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
                 const campaignFlow = await readFileContent(campaignFlowFile);
                 const initialMessage = await readFileContent(initialMessageFile);
                 const followUpMessage = await readFileContent(followUpMessageFile);
+
                 const text = `${campaignName} ${campaignType} ${campaignObjective}`; 
                 const embeddings = await embeddingModel.embedQuery(text);
                 // const vector = {
@@ -74,15 +75,11 @@ export async function POST(req: NextRequest) {
                 //     personaName:personaName ,
                 //     jobRole:jobRole,
                 //     campaignObjective:campaignObjective,
-
                 //     communicationStyles:communicationStyles,
-
                 //     initialMessage:initialMessage,
                 //     followUpMessage:followUpMessage
-
                 //   },
                 // }
-
                 // await index.namespace("variables").upsert([vector]);
                 
                 const campaignNameVector = {
@@ -163,6 +160,14 @@ export async function POST(req: NextRequest) {
                   metadata: {
                     source: "followUpMessage",
                     value: followUpMessage || '',
+                  }
+                };
+                const campaignFlowVector = {
+                  id: randomUUID(),
+                  values: embeddings,
+                  metadata: {
+                    source: "campaignFlow",
+                    value: campaignFlow || '',
                   }
                 };
 
@@ -451,7 +456,7 @@ return chunks;
 }
 
 type SupportedFileType = "pdf"  | "txt" ;
-async function readFileContent(file: File): Promise<string> {
+export async function readFileContent(file: File): Promise<string> {
     try {
         console.log("Reading file content:", file.name);
         
@@ -464,77 +469,6 @@ async function readFileContent(file: File): Promise<string> {
         }
         switch (fileExtension) {
           case "pdf":
-              // try {
-              //     // For browser environments, we need to use different approach
-              //     if (typeof window !== 'undefined') {
-              //         // Convert the file to ArrayBuffer
-              //         const arrayBuffer = await file.arrayBuffer();
-                      
-              //         // Use pdf.js to parse the PDF
-              //         const pdf = await import('pdfjs-dist');
-              //         // Set the worker source
-              //         const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
-              //         pdf.GlobalWorkerOptions.workerSrc = pdfjsWorker;
-                      
-              //         // Load the document
-              //         const loadingTask = pdf.getDocument(arrayBuffer);
-              //         const document = await loadingTask.promise;
-                      
-              //         // Extract text from all pages
-              //         let text = '';
-              //         for (let i = 1; i <= document.numPages; i++) {
-              //             const page = await document.getPage(i);
-              //             const content = await page.getTextContent();
-              //             const pageText = content.items.map(item => item.str).join(' ');
-              //             text += pageText + '\n';
-              //         }
-                      
-              //         console.log("Parsed PDF Data:", text);
-              //         return text;
-              //     } else {
-              //         // For Node.js environment, use a different approach
-              //         const { PDFLoader } = await import("langchain/document_loaders/fs/pdf");
-              //         const fs = await import('fs');
-              //         const path = await import('path');
-                      
-              //         // Create a temporary file
-              //         const tempPath = path.join(process.cwd(), 'temp_pdf_file.pdf');
-              //         fs.writeFileSync(tempPath, Buffer.from(await file.arrayBuffer()));
-                      
-              //         // Use LangChain's PDFLoader
-              //         const loader = new PDFLoader(tempPath);
-              //         const docs = await loader.load();
-                      
-              //         // Clean up temp file
-              //         fs.unlinkSync(tempPath);
-                      
-              //         // Extract text
-              //         const text = docs.map((doc) => doc.pageContent).join("\n");
-              //         console.log("Parsed PDF Data:", text);
-              //         return text;
-              //     }
-              // } catch (error) {
-              //     console.error('Error parsing PDF:', error);
-              //     throw new Error(`Failed to parse PDF: ${error.message}`);
-              // }
-              // ------------------------------------------------------------------------------------
-              // try {
-              //   // Convert the file to ArrayBuffer
-              //   const arrayBuffer = await file.arrayBuffer();
-              //   const uint8Array = new Uint8Array(arrayBuffer);
-                
-              //   const buffer = Buffer.from(uint8Array);
-              //   // Use pdf-parse to extract text
-              //   const result = await pdfParse(buffer);
-              //   const text = result.text;
-                
-              //   console.log("Parsed PDF Data:", text);
-              //   return text;
-              // } catch (error) {
-              //     console.error('Error parsing PDF:', error);
-              //     throw new Error(`Failed to parse PDF: ${error}`);
-              // }
-          
               try {
                 const tempFilePath = `/tmp/${file.name}.pdf`;
 

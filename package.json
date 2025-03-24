@@ -8,7 +8,18 @@
     "start": "next start",
     "lint": "next lint",
     "prisma:studio": "npx prisma studio",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testPathIgnorePatterns": [
+      "<rootDir>/.next/",
+      "<rootDir>/node_modules/"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.ts"
+    ]
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
@@ -39,6 +50,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "filepond": "^4.32.7",
+    "filepond-plugin-file-validate-type": "^1.2.9",
     "formidable": "^3.5.2",
     "framer-motion": "^11.9.0",
     "fs": "^0.0.1-security",

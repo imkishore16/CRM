@@ -1,121 +1,140 @@
-"use client";
+// app/pdf-uploader/page.tsx
+'use client';
 
-import { useState } from "react";
-import { FilePond, registerPlugin } from "react-filepond";
-import "filepond/dist/filepond.min.css";
-import { toast, Toaster } from "react-hot-toast";
-import Lottie from "react-lottie";
-import type { FilePondFile } from "filepond";
+import React, { useState, useRef } from 'react';
+import { FilePond, registerPlugin } from 'react-filepond';
+import 'filepond/dist/filepond.min.css';
+import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type';
 
-// Import FilePond plugins if needed
-// import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type';
-// import FilePondPluginImagePreview from 'filepond-plugin-image-preview';
-// import 'filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css';
+// Register FilePond plugins
+registerPlugin(FilePondPluginFileValidateType);
 
-// Register plugins if needed
-// registerPlugin(FilePondPluginFileValidateType, FilePondPluginImagePreview);
+export default function PDFUploader() {
+  const [parsedText, setParsedText] = useState<string>('');
+  const [fileName, setFileName] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const pondRef = useRef<FilePond>(null);
 
-interface FileResponse {
-  parsedText: string;
-  [key: string]: any;
-}
-
-export default function FileUpload() {
-  const [fileResponse, setFileResponse] = useState<FileResponse | null>(null);
-  const [files, setFiles] = useState<FilePondFile[]>([]);
-
-  // You would need to import your animation data
-  // For now, we'll use a placeholder
-  const animationUpload = {
-    v: "5.7.8",
-    fr: 30,
-    ip: 0,
-    op: 60,
-    w: 260,
-    h: 260,
-    nm: "Upload Animation",
-    ddd: 0,
-    assets: [],
-    layers: [],
-    markers: []
+  const handleProcessFile = async (
+    fieldName: string,
+    file: any,
+    metadata: any,
+    load: Function,
+    error: Function,
+    progress: Function,
+    abort: Function
+  ) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append('filepond', file);
+      
+      // Send the file to the API
+      const response = await fetch('/api/testApi/parse-pdf', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        setError(data.error);
+        error(data.error);
+        return;
+      }
+      
+      // Update state with parsed text
+      setParsedText(data.parsedText);
+      setFileName(data.fileName);
+      
+      // Complete the upload
+      load(data.fileName);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during upload');
+      error(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const uploadOptions = {
-    loop: true,
-    autoplay: true,
-    animationData: animationUpload,
-    rendererSettings: {
-      preserveAspectRatio: "xMidYMid slice",
-    },
-  };
-
-  const notify = (status: "success" | "error", message: string) => {
-    toast.dismiss();
-    if (status === "success") {
-      toast.success(message);
-    } else {
-      toast.error(message);
+  const clearResults = () => {
+    setParsedText('');
+    setFileName('');
+    setError(null);
+    if (pondRef.current) {
+      pondRef.current.removeFiles();
     }
   };
 
   return (
-    <div>
-      {/* <Toaster />
-      <FilePond
-        files={files}
-        onupdatefiles={setFiles}
-        allowMultiple={false}
-        maxFiles={1}
-        name="file"
-        labelIdle='Drag & Drop your files or <span class="filepond--label-action">Browse</span>'
-        acceptedFileTypes={["application/pdf"]}
-        server={{
-          process: {
-            url: "/api/testApi/upload",
-            method: "POST",
-            withCredentials: false,
-            onload: (response) => {
-              try {
-                const parsedResponse = JSON.parse(response);
-                setFileResponse(parsedResponse);
-                notify("success", "File uploaded successfully");
-                return response;
-              } catch (error) {
-                notify("error", "Failed to parse server response");
-                return response;
-              }
-            },
-            onerror: (response) => {
-              notify("error", "Failed to upload file");
-              return response;
-            },
-          },
-          fetch: null,
-          revert: null,
-        }}
-      />
-
-      <div>
-        {fileResponse ? (
-          <div className="p-5">
-            <h1 className="font-black text-xl">Text from the PDF:</h1>
-            <pre className="text-wrap p-5 bg-gray-50 rounded-md border mt-2 max-h-[400px] overflow-auto">
-              {fileResponse.parsedText}
-            </pre>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2 justify-center items-center">
-            <h2 className="font-bold mt-10">Upload a file to chat</h2>
-            <p>Supported file types: PDF</p>
-            <div
-              className="h-[260px] w-[260px]"
-              onClick={() => notify("success", "Please upload a PDF file")}
-            >
-              <Lottie options={uploadOptions} height={260} width={260} />
-            </div>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <h1 className="text-2xl font-bold mb-6">PDF Parser</h1>
+      
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Upload PDF File</h2>
+        
+        <FilePond
+          ref={pondRef}
+          acceptedFileTypes={['application/pdf']}
+          labelFileTypeNotAllowed="Only PDF files are allowed"
+          fileValidateTypeLabelExpectedTypes="Please upload a PDF file"
+          allowMultiple={false}
+          maxFiles={1}
+          server={{
+            process: handleProcessFile,
+          }}
+          labelIdle='Drag & Drop your PDF file or <span class="filepond--label-action">Browse</span>'
+          className="mb-4"
+        />
+        
+        {isLoading && (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span className="ml-2">Processing...</span>
           </div>
         )}
-      </div> */}
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <p>{error}</p>
+          </div>
+        )}
+        
+        {parsedText && (
+          <button
+            onClick={clearResults}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded"
+          >
+            Clear Results
+          </button>
+        )}
+      </div>
+      
+      {parsedText && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Parsed Text from {fileName}</h2>
+            <button
+              onClick={() => {navigator.clipboard.writeText(parsedText)}}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded text-sm"
+            >
+              Copy to Clipboard
+            </button>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded border border-gray-200 h-96 overflow-y-auto whitespace-pre-wrap">
+            {parsedText}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -171,73 +171,10 @@ async function handleCampaignVariables(index:any,spaceId:number): Promise<Campai
   return campaignVariables;
 }
 
-// async function fetchCampaignDataFromVectorDB(index:any , spaceId: number): Promise<CampaignVariables> {
-//   try {
-    
-//     const queryResponse = await index.namespace("variables").query({
-//       // filter: {source: "variables",},
-//       filter: {
-//         source: { $eq: "variables" }
-//       },
-//       topK: 1,
-//       includeMetadata: true,
-//       // Since values array is empty, we need an alternative approach:
-//       // 1. Either provide a dummy vector of the right dimension
-//       // 2. Or use Pinecone's metadata-only query if available
-//       vector: new Array(384).fill(0), // Dummy vector (adjust dimension as needed)
-//     });
-    
-//     // Check if we got any matches
-//     if (queryResponse.matches && queryResponse.matches.length > 0 && queryResponse.matches[0].metadata) {
-//         const metadata = queryResponse.matches[0].metadata;
-      
-//         // Convert the metadata to our CampaignVariables format
-//         return {
-//           campaignName: metadata.campaignName || "",
-//           campaignType: metadata.campaignType || "",
-//           overrideCompany: metadata.overrideCompany || "",
-//           personaName: metadata.personaName || "",
-//           jobRole: metadata.jobRole || "",
-//           campaignObjective: metadata.campaignObjective || "",
-//           communicationStyles: metadata.communicationStyles || "",
-//           initialMessage: metadata.initialMessage || "",
-//           followUpMessage: metadata.followUpMessage || ""
-//         };
-//     }
-    
-//     return {
-//       campaignName: "Default Campaign",
-//       campaignType: "Standard",
-//       overrideCompany: "",
-//       personaName: "AI Assistant",
-//       jobRole: "Customer Support",
-//       campaignObjective: "Assist customers",
-//       communicationStyles: "Friendly, Professional",
-//       initialMessage: "Hello! How can I help you today?",
-//       followUpMessage: "Is there anything else you'd like assistance with?"
-//     };
-
-//   } catch (error) {
-//     console.error("Error fetching campaign data from vector DB:", error);
-//     // Return default values if there's an error
-//     return {
-//       campaignName:  "Default Campaign",
-//       campaignType: "Standard",
-//       overrideCompany: "",
-//       personaName: "AI Assistant",
-//       jobRole: "Customer Support",
-//       campaignObjective: "Assist customers",
-//       communicationStyles: "Friendly, Professional",
-//       initialMessage: "Hello! How can I help you today?",
-//       followUpMessage: "Is there anything else you'd like assistance with?"
-//     };
-//   }
-// }
-
 async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promise<CampaignVariables> {
   try {
     // Create a dummy vector for querying (adjust dimension as needed)
-    const dummyVector = new Array(1536).fill(0);
+    const dummyVector = new Array(384).fill(0);
     
     // Object to store our results
     const campaignData: CampaignVariables = {
