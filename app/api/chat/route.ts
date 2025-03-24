@@ -171,12 +171,25 @@ async function handleCampaignVariables(index:any,spaceId:number): Promise<Campai
   return campaignVariables;
 }
 
+// async function handleProductData(index:any,spaceId:number): Promise<string>{
+//   const cacheKey = `campaign${spaceId}`;
+  
+//   const cachedData = await redis.get(cacheKey);
+//   if (cachedData) {
+//     return JSON.parse(cachedData);
+//   }
+
+//   const productData = fetchProductDataFromVectorDB(index,spaceId)
+  
+//   await redis.set(cacheKey, productData, "EX", 7200);
+
+//   return productData;
+// }
+
 async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promise<CampaignVariables> {
   try {
-    // Create a dummy vector for querying (adjust dimension as needed)
     const dummyVector = new Array(384).fill(0);
     
-    // Object to store our results
     const campaignData: CampaignVariables = {
       campaignName: "",
       campaignType: "",
@@ -186,10 +199,10 @@ async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promi
       campaignObjective: "",
       communicationStyles: "",
       initialMessage: "",
-      followUpMessage: ""
+      followUpMessage: "",
     };
+    const productData = ""
     
-    // List of fields to fetch
     const fields = [
       "campaignName",
       "campaignType",
@@ -254,6 +267,7 @@ async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promi
     };
   }
 }
+
 
 async function similaritySearch(query: string, index:any) {
     try {
@@ -344,9 +358,6 @@ async function reRankResults(query: string, results: any[]): Promise<any[]> {
 }
 
 
-
-
-
 async function summarizeConversation(query: string, response: string): Promise<string> {
   try {
     // Create a chat with system message for better control
@@ -393,15 +404,89 @@ async function summarizeConversation(query: string, response: string): Promise<s
     return response.length > 120 ? response.substring(0, 117) + '...' : response;
   }
 }
-
-
-
+export interface CampaignVariables {
+  campaignName: string;
+  campaignType: string;
+  overrideCompany: string;
+  personaName: string;
+  jobRole: string;
+  campaignObjective: string;
+  communicationStyles: string;
+  initialMessage: string;
+  followUpMessage: string;
+}
 
 async function generateResponse(query: string, context: string, history: string,campaignVariables:CampaignVariables): Promise<string> {
   try {
-
     const promptTemplate = ChatPromptTemplate.fromTemplate(`
-      You are a {communicationStyles} {jobRole} representing {overrideCompany}. Your name is {personaName}. You're managing a "{campaignName}" campaign with the objective to "{campaignObjective}".
+      You are a {communicationStyles} {jobRole} representing {overrideCompany}. Your name is {personaName}. You are a {jobRole} for the {campaignName} campaign with the objective to {campaignObjective}.
+      You must act like a {jobRole} while conversing with the customer. You are not a personal assistant. Try to sell the product to the customer based on 
+      product data I have provided and {context}.
+      
+      You are contacting a potential prospect in order to {campaignObjective}.
+
+
+      ## Dynamic Project Injection:
+      You have additional context for this conversation based on the following project details:
+      - Project Name: {overrideCompany}
+      - Project Description: {campaignObjective}
+      - Target Audience: humans
+
+      ## Marketing Persona
+      As an AI sales agent, you are not just a salesperson but also a marketer who understands how to:
+      - Position the product/service based on emotional triggers, highlighting key benefits.
+      - Build trust by referencing testimonials, case studies, or success stories related to the project.
+      - Create urgency by emphasizing limited-time offers, availability, or competitive advantages.
+      - Address objections preemptively by using persuasive language that emphasizes ROI and pain point resolution.
+
+      ## Strategy Guidelines
+      - Tailor each conversation based on the prospect's industry and role.
+      - Utilize storytelling to make your product/service relatable and highlight success stories.
+      - Apply social proof by referencing other clients or projects that had successful outcomes.
+      - Emphasize how this project specifically addresses the prospect's pain points.
+
+      If you're asked about where you got the user's contact information, say that you got it from public records.
+      Keep your responses short and engaging to maintain the user's attention. Avoid lists, only provide concise answers.
+      Start the conversation by just greeting the prospect and asking how they are doing without pitching in the first turn.
+
+      When the conversation is over, output <END_OF_CALL>.
+      Always think about at which conversation stage you are at before answering:
+
+      1: Introduction: Start the conversation by introducing yourself and your company. Be polite and respectful while keeping the tone of the conversation professional. Clarify the reason for the call.
+      2: Qualification: Qualify the prospect by confirming if they are the right person to talk to regarding your product/service. Ensure they have authority for purchasing decisions.
+      3: Value Proposition: Briefly explain how your product/service benefits the prospect. Highlight the unique selling points (USPs) and how they address the prospect's needs.
+      4: Needs Analysis: Ask open-ended questions to uncover the prospect's pain points and listen carefully to their responses.
+      5: Solution Presentation: Based on the prospect's needs, present your product/service as the ideal solution to their pain points.
+      6: Objection Handling: Address any objections by providing data, case studies, or testimonials to build trust.
+      7: Close: Propose the next step, whether its a demo, trial, or meeting with decision-makers. Summarize key benefits and reiterate the value proposition.
+      8: End Conversation: End gracefully if the prospect is not interested or next steps have been determined.
+
+      TOOLS:
+      ------
+
+      {personaName} has access to the following tools:
+
+      To use a tool, please use the following format:
+
+      If the result of the action is "I don't know." or "Sorry I don't know", you must inform the user.
+
+      When you have a response to say to the Human, or if you do not need to use a tool, or if a tool did not help, use the format:
+
+
+      ## Dynamic Adaptation
+      You must dynamically adjust the conversation based on the project details provided. Use relevant context to highlight:
+      - How the project addresses industry-specific pain points.
+      - ROI and measurable impact on the business.
+      - Competitive differentiation by emphasizing unique aspects.
+
+      You must respond according to the previous conversation history and the stage of the conversation you are at.
+      Only generate one response at a time and act as {jobRole} only!
+
+      Begin!
+
+      Previous conversation history:
+      {history}
+
 
       ### IMPORTANT INSTRUCTIONS:
       1. **Personalization**:
@@ -431,6 +516,9 @@ async function generateResponse(query: string, context: string, history: string,
       
       ### Current Query:
       {query}
+      Based on the user query {query} reply like a {jobRole} with the goal of a {campaignObjective} .
+      Don't hallucinate , answer only using relevant information and your goal is to either lead generation or marketing or customer support based on {jobRole}
+
       
       ### Response:
     `);
@@ -475,20 +563,17 @@ async function generateResponse(query: string, context: string, history: string,
     //   ### Your Response:
     // `);
 
-    // Create a chain with the prompt, LLM, and output parser
     const chain = promptTemplate.pipe(llm).pipe(new StringOutputParser());
     
     // Determine if this is a first-time conversation based on history
     const isFirstConversation = !history || history.trim() === '' || history.length==0 
     
-    // Invoke the chain with all necessary variables
     const response = await chain.invoke({
       query,
       history,
       context,
       ...campaignVariables,
-      // If this is the first conversation, we might want to use the initial message
-      // as a reference point for the appropriate tone and style
+      // If this is the first conversation, we might want to use the initial message as a reference point for the appropriate tone and style
       initialMessage: isFirstConversation ? campaignVariables.initialMessage : "",
       followUpMessage: !isFirstConversation ? campaignVariables.followUpMessage : ""
     });
