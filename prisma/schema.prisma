@@ -33,6 +33,7 @@ model SpaceCustomer {
   id           Int    @id @default(autoincrement())
   spaceId      Int
   mobileNumber String
+  conversationStatus ConversationStatus
 }
 
 enum Role {
@@ -42,6 +43,12 @@ enum Role {
 }
 
 enum CampaignStatus {
+  NOT_STARTED
+  ONGOING
+  COMPLETED
+}
+
+enum ConversationStatus {
   NOT_STARTED
   ONGOING
   COMPLETED

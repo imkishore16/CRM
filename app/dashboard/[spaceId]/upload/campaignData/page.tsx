@@ -114,7 +114,7 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
       if (initialMessage) formData.append("initialMessage", initialMessage)
       if (followUpMessage) formData.append("followUpMessage", followUpMessage)
 
-      const response = await fetch(`${process.env.NEXTAUTH_URL}/api/embed?spaceId=${spaceId}&namespace=campaignData`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/api/embed?spaceId=${spaceId}&namespace=campaignData`, {
         method: "POST",
         body: formData,
       })

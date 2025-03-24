@@ -30,7 +30,7 @@ const ChatInterface: React.FC = () => {
 
     try {
       // Call the chat API
-      const response = await fetch("/api/sampleChat", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/api/sampleChat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -54,7 +54,6 @@ const ChatInterface: React.FC = () => {
     } catch (error) {
       console.error("Error fetching response:", error);
 
-      // Display an error message
       const errorMessage: Message = {
         id: messages.length + 2,
         text: "Sorry, something went wrong. Please try again.",

@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
+import { redirect } from 'next/navigation';
 import { SignInFlow } from "@/types/auth-types";
 import AuthScreen from "@/components/auth/auth-screen";
 
@@ -26,8 +26,7 @@ export default function AuthPage({ searchParams }: AuthPageProps) {
   }, [searchParams]);
 
   if (session.status === "authenticated") {
-    router.push("/");
-    return null;
+    redirect("/");
   }
 
   return <AuthScreen authType={formType} />;

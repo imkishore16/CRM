@@ -30,7 +30,7 @@ const AllChats: React.FC = () => {
 
     try {
       // Call the chat API
-      const response = await fetch("/api/sampleChat", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
         
         //filter the campaign data using source as filter 
-        if (namespace==="campaigndata")
+        if (namespace==="campaignData")
         {   
             const indexName = "campaign" + spaceId;
             const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
@@ -61,28 +61,124 @@ export async function POST(req: NextRequest) {
                 const campaignFlow = await readFileContent(campaignFlowFile);
                 const initialMessage = await readFileContent(initialMessageFile);
                 const followUpMessage = await readFileContent(followUpMessageFile);
+                const text = `${campaignName} ${campaignType} ${campaignObjective}`; 
+                const embeddings = await embeddingModel.embedQuery(text);
+                // const vector = {
+                //   id: randomUUID(),
+                //   values: embeddings,
+                //   metadata: { 
+                //     source:"variables",
+                //     campaignName:campaignName ,
+                //     campaignType:campaignType, 
+                //     overrideCompany:overrideCompany ,
+                //     personaName:personaName ,
+                //     jobRole:jobRole,
+                //     campaignObjective:campaignObjective,
+
+                //     communicationStyles:communicationStyles,
+
+                //     initialMessage:initialMessage,
+                //     followUpMessage:followUpMessage
+
+                //   },
+                // }
+
+                // await index.namespace("variables").upsert([vector]);
                 
-                const vector = {
+                const campaignNameVector = {
                   id: randomUUID(),
-                  values: [],
-                  metadata: { 
-                    campaignName:campaignName ,
-                    campaignType:campaignType, 
-                    overrideCompany:overrideCompany ,
-                    personaName:personaName ,
-                    jobRole:jobRole,
-                    campaignObjective:campaignObjective,
+                  values: embeddings,
+                  metadata: {
+                    source: "campaignName",
+                    value: campaignName,
+                  }
+                };
 
-                    communicationStyles:communicationStyles,
+                const campaignTypeVector = {
+                  id: randomUUID(),
+                  values: embeddings,
+                  metadata: {
+                    source: "campaignType",
+                    value: campaignType,
+                  }
+                };
+            
+                const overrideCompanyVector = {
+                  id: randomUUID(),
+                  values: embeddings,
+                  metadata: {
+                    source: "overrideCompany",
+                    value: overrideCompany || '',
+                  }
+                };
+            
+                const personaNameVector = {
+                  id: randomUUID(),
+                  values: embeddings,
+                  metadata: {
+                    source: "personaName",
+                    value: personaName,
+                  }
+                };
+            
+                const jobRoleVector = {
+                  id: randomUUID(),
+                  values: embeddings,
+                  metadata: {
+                    source: "jobRole",
+                    value: jobRole,
+                  }
+                };
+            
+                const campaignObjectiveVector = {
+                  id: randomUUID(),
+                  values: embeddings,
+                  metadata: {
+                    source: "campaignObjective",
+                    value: campaignObjective,
+                  }
+                };
+            
+                const communicationStylesVector = {
+                  id: randomUUID(),
+                  values: embeddings,
+                  metadata: {
+                    source: "communicationStyles",
+                    value: communicationStyles,
+                  }
+                };
+            
+                const initialMessageVector = {
+                  id: randomUUID(),
+                  values: embeddings,
+                  metadata: {
+                    source: "initialMessage",
+                    value: initialMessage,
+                  }
+                };
+            
+                const followUpMessageVector = {
+                  id: randomUUID(),
+                  values: embeddings,
+                  metadata: {
+                    source: "followUpMessage",
+                    value: followUpMessage || '',
+                  }
+                };
 
-                    initialMessage:initialMessage,
-                    followUpMessage:followUpMessage
+                await index.namespace("variables").upsert([
+                  campaignNameVector,
+                  campaignTypeVector,
+                  overrideCompanyVector,
+                  personaNameVector,
+                  jobRoleVector,
+                  campaignObjectiveVector,
+                  communicationStylesVector,
+                  initialMessageVector,
+                  followUpMessageVector,
+                ]);
 
-                  },
-                  source:"variables"
-                }
 
-                await index.namespace("variables").upsert([vector]);
             } catch (error) {
                 console.error(`Error embedding campaing data`, error);
                 return NextResponse.json(
@@ -95,7 +191,8 @@ export async function POST(req: NextRequest) {
               const productLinks = await readFileContent(productLinksFile);
               const links = parseLinksFromFile(productLinks);
               console.log(links);
-              const vectors = await Promise.all(
+              if(links.length>0){
+                const vectors = await Promise.all(
                 links.map(async (item) => {
                   const embedding = await embeddingModel.embedQuery(item.key);
 
@@ -108,13 +205,14 @@ export async function POST(req: NextRequest) {
               )
               await index.namespace("links").upsert(vectors);
               console.log("Successfully uploaded to Pinecone.");
+              }
             }
             catch (error){
               console.error("Error uploading to Pinecone:" ,error);
             }
             
         }
-        else if (namespace==="productdata")
+        else if (namespace==="productData")
         {
             const indexName = "campaign" + spaceId;
             const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
@@ -139,11 +237,13 @@ export async function POST(req: NextRequest) {
                 }
             }
         }
-        else if(namespace==="customerdata") // TODO : store customer data properly
+        else if(namespace==="customerData") // TODO : store customer data properly
         {
           const indexName = "campaign" + spaceId;
           const index = pc.index(indexName , `https://${indexName}-bh2nb1e.svc.aped-4627-b74a.pinecone.io`);
           const files = formData.getAll('files') as File[];
+          
+          console.log(files)
           for (const file of files) {
               try {
                   const result = await embedCustomerData(file,index,spaceId,"1");
@@ -203,8 +303,8 @@ export async function POST(req: NextRequest) {
                   const embedding = await embeddingModel.embedQuery(item.key);
 
                   return{
-                    id: `promo_${Date.now()}_${Math.random()}`, // Unique ID
-                    values: embedding, // Store embeddings
+                    id: `promo_${Date.now()}_${Math.random()}`, 
+                    values: embedding, 
                     metadata: { key: item.key, value: item.value }, 
                   }
                 })
@@ -289,6 +389,7 @@ async function embedProductData(file: File, index: any): Promise<any> {
 
 async function embedCustomerData(file: File, index: any,spaceId : string,campaignId : string) {
     try{
+      console.log("here")
         const data = await readFileContent(file);
         // Regex to match "MobileNumber: User Data"
         const regex = /(\d{10})\s*:\s*([\s\S]+?)(?=\n\d{10}\s*:|$)/g;
@@ -308,6 +409,7 @@ async function embedCustomerData(file: File, index: any,spaceId : string,campaig
                 mobileNumber: mobileNumber,
                 // campaignId : parseInt(campaignId, 10),
                 // status : false
+                conversationStatus:"NOT_STARTED"
             },
         });
 

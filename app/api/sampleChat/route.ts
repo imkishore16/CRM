@@ -6,8 +6,8 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import redis from "@/clients/redis";
-
-
+import twilio from 'twilio';
+import twilioClient from "@/clients/twilioClient";
 export interface CampaignVariables {
   campaignName: string;
   campaignType: string;
@@ -20,22 +20,28 @@ export interface CampaignVariables {
   followUpMessage: string;
 }
 
-export async function POST(req: NextRequest) {
-    try {
-        const data = await req.json();
-        const query = data.query as string;
-        const  to = data.to as string;     
-        const  message  = data.body as string;     
+async function parseFormEncodedBody(req: NextRequest) {
+  const rawBody = await req.text();
+  return Object.fromEntries(new URLSearchParams(rawBody)); 
+}
 
+export async function POST(req: NextRequest ) {
+    try {
+        // const data = await parseFormEncodedBody(req); 
+        // console.log("Received Twilio payload:", data);
+        // const mobileNumber = data.From?.replace("whatsapp:", "");
+        // const query = data.Body; 
+        const data= await req.json();
+        const query = data.query as string;
+        const mobileNumber="9445422734"
+        console.log(query)
         if (!query) {
             return NextResponse.json({ error: "Query is required" }, { status: 400 });
         }
 
         const spaceId = 9
-        const mobileNumber= "9445422734"
         const indexName="campaign"+spaceId;
         const index = pc.index(indexName , `https://${indexName}-${process.env.PINECONE_URL}`);
-
 
         console.log(1)
         const pastConversations = await fetchConversationHistory(query,mobileNumber,index);
@@ -48,8 +54,7 @@ export async function POST(req: NextRequest) {
         const relevantDocs = await similaritySearch(query, index);
         console.log(4)
         
-        const campaignVariables = await handleCampaignVariables(index,spaceId || 0);
-
+        const campaignVariables = await handleCampaignVariables(index,spaceId || 9);
 
         const response = await generateResponse(query,relevantDocs,combinedConversations ,campaignVariables);
         console.log(5)
@@ -57,7 +62,13 @@ export async function POST(req: NextRequest) {
         await saveConversation(mobileNumber, query, response,index);
         console.log(6)
 
-        return NextResponse.json({ message: response }, { status: 200 });
+        // await twilioClient.messages.create({
+        //   body: response,
+        //   from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, // Your Twilio WhatsApp number
+        //   to: `whatsapp:${mobileNumber}` // Add the whatsapp: prefix back
+        // });
+
+      return NextResponse.json({ message: response }, { status: 200 });
     } catch (error) {
         console.error("Error processing request:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -65,8 +76,18 @@ export async function POST(req: NextRequest) {
 }
 
 
-async function saveConversation(mobileNumber: string, query: string, response: string, index: any): Promise<void> {
+async function saveConversation(
+  mobileNumber: string, 
+  query: string, 
+  response: string, 
+  index: any
+): Promise<void> {
   try {
+    // Create timestamps once to ensure consistency
+    const queryId = `query_${Date.now()}`;
+    const responseId = `resp_${Date.now()}`;
+    const timestamp = new Date().toISOString();
+    
     // Create embeddings for both query and response
     const [queryEmbedding, responseEmbedding] = await Promise.all([
       embeddingModel.embedQuery(query),
@@ -75,84 +96,107 @@ async function saveConversation(mobileNumber: string, query: string, response: s
     
     const summary = await summarizeConversation(query, response);
     
-    // Save query with its embedding
+    // Save query and response with their embeddings
     await index.namespace(mobileNumber).upsert([
       {
-        id: `query_${Date.now()}`, 
+        id: queryId,
         values: queryEmbedding,
         metadata: {
           type: 'query',
           text: query,
-          response_id: `resp_${Date.now()}`, 
+          user_query: query,  // Adding this for consistency with fetch
+          response_id: responseId,
           summary: summary,
-          // threadId: 1,    
-          timestamp: new Date().toISOString(),
+          timestamp: timestamp,
         },
       },
       {
-        id: `resp_${Date.now()}`, 
+        id: responseId,
         values: responseEmbedding,
         metadata: {
           type: 'response',
           text: response,
-          query_id: `query_${Date.now()}`, 
+          llm_reply: response,  // Adding this for consistency with fetch
+          query_id: queryId,
           summary: summary,
-          // threadId: 1,
-          timestamp: new Date().toISOString(),
+          timestamp: timestamp,
         },
       }
     ]);
   } catch (error) {
     console.error("Error saving conversation:", error);
+    throw error;  // Re-throw to allow caller to handle
   }
 }
 
-async function fetchConversationHistory(query:string , mobileNumber: string , index:any): Promise<string[]> {
-    try {
-      const queryEmbedding = await embeddingModel.embedQuery(query)
-      const stats = await index.describeIndexStats();
-      if (stats.namespaces && stats.namespaces[mobileNumber]) {
-        console.log(`Namespace "${mobileNumber} exists".`);
-      } else {
-        console.log(`Namespace "${mobileNumber}" does not exist in index ".`);
-        return [];
-      }
-
-      const queryResponse = await index.namespace(mobileNumber).query({
-        vector:queryEmbedding,
-        topK: 10, 
-        includeMetadata: true,
-        // filter: { threadId: "latest" } 
-      });
-  
-      if (!queryResponse.matches || queryResponse.matches.length === 0) {
-        return [];
-      }
-  
-      // Combine the text from the conversations
-      const conversations = queryResponse.matches.map((match:any) => {
-        const metadata = match.metadata;
-        return `User Query: ${metadata.user_query}\nLLM Reply: ${metadata.llm_reply}`;
-      });
-      console.log("conversations : " , conversations);
-      return conversations;
-    } catch (error) {
-      console.error("Error fetching conversation history:", error);
+async function fetchConversationHistory(
+  query: string, 
+  mobileNumber: string, 
+  index: any
+): Promise<string[]> {
+  try {
+    const queryEmbedding = await embeddingModel.embedQuery(query);
+    
+    // Check if namespace exists
+    const stats = await index.describeIndexStats();
+    if (!stats.namespaces || !stats.namespaces[mobileNumber]) {
+      console.log(`Namespace "${mobileNumber}" does not exist in index.`);
       return [];
     }
+    
+    const queryResponse = await index.namespace(mobileNumber).query({
+      vector: queryEmbedding,
+      topK: 10,
+      includeMetadata: true,
+    });
+    
+    if (!queryResponse.matches || queryResponse.matches.length === 0) {
+      return [];
+    }
+    
+    // Format and return conversations
+    const conversations = queryResponse.matches.map((match: any) => {
+      const metadata = match.metadata;
+      // Use the consistent fields or fall back to text field
+      const userQuery = metadata.user_query || metadata.text || "Unknown query";
+      let llmReply = "Unknown reply";
+      
+      // For response types, use llm_reply or text
+      if (metadata.type === 'response') {
+        llmReply = metadata.llm_reply || metadata.text || "Unknown reply";
+      }
+      // For query types, try to find the corresponding response
+      else if (metadata.type === 'query' && metadata.response_id) {
+        // You might need to fetch the corresponding response separately
+        // This is just a placeholder for the concept
+        llmReply = "Response would need to be fetched separately";
+      }
+      
+      return `User Query: ${userQuery}\nLLM Reply: ${llmReply}`;
+    });
+    
+    return conversations;
+  } catch (error) {
+    console.error("Error fetching conversation history:", error);
+    return [];
+  }
 }
+
 
 async function handleCampaignVariables(index:any,spaceId:number): Promise<CampaignVariables>{
   const cacheKey = `campaign${spaceId}`;
   
   //If already present , just return
-  const cachedData = await redis.get(cacheKey);
-  if (cachedData) {
-    return JSON.parse(cachedData);
-  }
+  // const cachedData = await redis.get(cacheKey);
+  // if (cachedData) {
+  //   console.log("cachedData :" , cachedData)
+  //   return JSON.parse(cachedData);
+  // }
 
   // else get from vec db first
-  const campaignVariables = fetchCampaignDataFromVectorDB(index,spaceId)
+  const campaignVariables =await fetchCampaignDataFromVectorDB(index,spaceId)
+
+  console.log("campaignVariables ;" , campaignVariables)
   
   //now store in redis then return
   await redis.set(cacheKey, JSON.stringify(campaignVariables), "EX", 7200);
@@ -170,7 +214,7 @@ async function fetchCampaignDataFromVectorDB(index:any , spaceId: number): Promi
       // Since values array is empty, we need an alternative approach:
       // 1. Either provide a dummy vector of the right dimension
       // 2. Or use Pinecone's metadata-only query if available
-      vector: new Array(1536).fill(0), // Dummy vector (adjust dimension as needed)
+      vector: new Array(384).fill(0), // Dummy vector (adjust dimension as needed)
     });
     
     // Check if we got any matches
@@ -362,121 +406,110 @@ async function summarizeConversation(query: string, response: string): Promise<s
 
 
 
-async function generateResponse(query: string, context: string, history: string,campaignVariable:CampaignVariables): Promise<string> {
+async function generateResponse(query: string, context: string, history: string,campaignVariables:CampaignVariables): Promise<string> {
   try {
-    // Combine conversation history and context
-    const fullContext = `
-      Conversation History:
-      ${history}
+
+    const promptTemplate = ChatPromptTemplate.fromTemplate(`
+      You are a {communicationStyles} {jobRole} representing {overrideCompany}. Your name is {personaName}. You're managing a "{campaignName}" campaign with the objective to "{campaignObjective}".
+
+      ### IMPORTANT INSTRUCTIONS:
+      1. **Personalization**:
+         - Use the persona, tone, and communication style specified.
+         - Respond as {personaName}, a {jobRole} at {overrideCompany}.
       
-      Retrieved Context:
-      ${context}
+      2. **Conversation Awareness**:
+         - If this is the first interaction with the user, introduce yourself appropriately.
+         - If this is a follow-up conversation, acknowledge previous interactions.
+
+      3. **Campaign Objectives**:
+         - Remember that this is a {campaignType} campaign.
+         - Your goal is to: {campaignObjective}
       
-      Current Query:
-      ${query}
-
-      product name
-
-      links
-      promo codes
-      mobile numbers
-
-    `;
-
-
-    const prompt1 = ChatPromptTemplate.fromTemplate(`
-      You are a professional and friendly salesperson for a company that sells {product}. Your goal is to introduce yourself, provide accurate and relevant information about the product, and guide the user toward making a purchase or taking the next step.
-    
-      ### Instructions:
-      1. **Introduction**:
-         - Start by introducing yourself and the product.
-         - Example: "Hi! I'm {salespersonName}, your personal sales assistant for {product}. How can I help you today?"
-    
-      2. **Stay Contextual**:
-         - Only provide information that is relevant to the user's query or the product.
-         - Do not make up details or provide information outside the context.
-    
-      3. **Sell the Product**:
-         - Highlight the key features and benefits of the product.
-         - Explain how the product solves the user's problem or meets their needs.
-         - Example: "Our {product} is designed to {key benefit}. It also includes features like {feature1}, {feature2}, and {feature3}."
-    
-      4. **Handle User Queries**:
-         - Respond to user questions in a clear and helpful manner.
-         - Address any concerns or objections the user might have.
-         - Example: "I understand your concern about {concern}. Let me assure you that our product {addresses concern}."
-    
-      5. **Close the Sale**:
-         - Guide the user toward making a purchase or taking the next step.
-         - Example: "Would you like to proceed with the purchase? I can help you with the checkout process!"
-    
+      4. **Response Guidelines**:
+         - Be conversational, helpful, and authentic.
+         - Focus on providing value and addressing the user's needs.
+         - Always be truthful - do not make up information not found in the context.
+         - Avoid mentioning specific links or URLs unless they appear in the provided context.
+         - Never share sensitive information like promo codes or phone numbers unless they appear in the context.
+      
       ### Conversation History:
       {history}
-    
-      ### Retrieved Context:
+      
+      ### Relevant Information:
       {context}
-    
+      
       ### Current Query:
       {query}
-    
-      ### Your Response:
+      
+      ### Response:
     `);
     
-    const prompt2 = ChatPromptTemplate.fromTemplate(`
-      You are a professional and friendly salesperson for a company that sells {context}. 
-      Your goal is to introduce yourself, provide accurate and relevant information about the product, and guide the user toward making a purchase or taking the next step.
+    // const prompt2 = ChatPromptTemplate.fromTemplate(`
+    //   You are a professional and friendly salesperson for a company that sells {context}. 
+    //   Your goal is to introduce yourself, provide accurate and relevant information about the product, and guide the user toward making a purchase or taking the next step.
     
-      ### Instructions:
-      1. **Introduction**:
-         - Start by introducing yourself and the product.
-         - Based on {history} decide if u have to introduce yourself again or not , so dont introduce yourself for every query and reply
-         - Example: "Hi! I'm {salespersonName}, here on behalf of {organizationName}"
+    //   ### Instructions:
+    //   1. **Introduction**:
+    //      - Start by introducing yourself and the product.
+    //      - Based on {history} decide if u have to introduce yourself again or not , so dont introduce yourself for every query and reply
+    //      - Example: "Hi! I'm {salespersonName}, here on behalf of {organizationName}"
 
        
-      2. **Stay Contextual**:
-         - Only provide information that is relevant to the user's query or the product.
-         - Do not make up details or provide information outside the context.
+    //   2. **Stay Contextual**:
+    //      - Only provide information that is relevant to the user's query or the product.
+    //      - Do not make up details or provide information outside the context.
     
-      3. **Sell the Product**:
-         - Highlight the key features and benefits of the product.
-         - Explain how the product solves the user's problem or meets their needs.
+    //   3. **Sell the Product**:
+    //      - Highlight the key features and benefits of the product.
+    //      - Explain how the product solves the user's problem or meets their needs.
     
-      4. **Handle User Queries**:
-         - Respond to user questions in a clear and helpful manner.
-         - Address any concerns or objections the user might have.
+    //   4. **Handle User Queries**:
+    //      - Respond to user questions in a clear and helpful manner.
+    //      - Address any concerns or objections the user might have.
         
     
-      5. **Close the Sale**:
-         - Guide the user toward making a purchase or taking the next step.
-         - Example: "Would you like to proceed with the purchase? I can help you with the checkout process!"
+    //   5. **Close the Sale**:
+    //      - Guide the user toward making a purchase or taking the next step.
+    //      - Example: "Would you like to proceed with the purchase? I can help you with the checkout process!"
     
-      ### Conversation History:
-      {history}
+    //   ### Conversation History:
+    //   {history}
     
-      ### Retrieved Context:
-      {context}
+    //   ### Retrieved Context:
+    //   {context}
     
-      ### Current Query:
-      {query}
+    //   ### Current Query:
+    //   {query}
     
-      ### Your Response:
-    `);
+    //   ### Your Response:
+    // `);
 
     // Create a chain with the prompt, LLM, and output parser
-    const chain = prompt2.pipe(llm).pipe(new StringOutputParser());
-      
-    const salespersonName="vadakunatan"
-    const organizationName="facebook"
-    // Generate the response
-    const response = await chain.invoke({salespersonName,organizationName, query ,history,context}); 
+    const chain = promptTemplate.pipe(llm).pipe(new StringOutputParser());
+    
+    // Determine if this is a first-time conversation based on history
+    const isFirstConversation = !history || history.trim() === '' || history.length==0 
+    
+    // Invoke the chain with all necessary variables
+    const response = await chain.invoke({
+      query,
+      history,
+      context,
+      ...campaignVariables,
+      // If this is the first conversation, we might want to use the initial message
+      // as a reference point for the appropriate tone and style
+      initialMessage: isFirstConversation ? campaignVariables.initialMessage : "",
+      followUpMessage: !isFirstConversation ? campaignVariables.followUpMessage : ""
+    });
+
+    return response;
     // need invoke a lot more stuff 
     // if past conversation exists , dont introduce again , hello there again on a new conversation / reach out again , ie the user didnt reply or different campaign , or campagin rerun 
     // on non suzzessful audience 
 
-    return response;
   } catch (error) {
     console.error("Error generating response:", error);
-    return "Failed to generate a response.";
+    return "I'm sorry, I encountered an issue while processing your request. Please try again shortly.";
   }
 }
 

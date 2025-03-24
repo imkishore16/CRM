@@ -16,33 +16,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const data = await req.json();
+    const { searchParams } = new URL(req.url);
+    const spaceName = searchParams.get("spaceName")
+
     
-    if (!data.spaceName) {
+    if (!spaceName) {
       return NextResponse.json(
         { success: false, message: "Space name is required" },
         { status: 400 }
       );
     }
     
-    // Use a transaction to ensure database consistency
     const result = await prisma.$transaction(async (prismaClient) => {
-      // Create the space
       const space = await prismaClient.space.create({
         data: {
-          name: data.spaceName,
+          name: spaceName,
           userId: session.user.id,
         },
       });
+      console.log("done")
       
       const spaceId = space.id;
       const indexName = "campaign" + spaceId;
       
       try {
-        // Initialize PineCone DB
         await initializePineConeDB(indexName);
       } catch (pineconeError) {
-        // If PineCone initialization fails, throw an error to trigger transaction rollback
         throw new Error(`Failed to initialize PineCone index: ${pineconeError}`);
       }
       

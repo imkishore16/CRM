@@ -72,11 +72,11 @@ export default function CustomerDataPage({ params }: CustomerDataProps) {
     try {
       const formData = new FormData()
 
-      files.forEach((file, index) => {
-        formData.append(`file-${index}`, file)
+      files.forEach((file) => {
+        formData.append('files', file)
       })
 
-      const response = await fetch(`/api/embed?spaceId=${spaceId}&index=customerData`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/api/embed?spaceId=${spaceId}&namespace=customerData`, {
         method: "POST",
         body: formData,
       })

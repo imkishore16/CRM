@@ -171,7 +171,7 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.17)
       twilio:
-        specifier: ^5.4.5
+        specifier: ^5.5.1
         version: 5.5.1
       uploadthing:
         specifier: ^7.4.4

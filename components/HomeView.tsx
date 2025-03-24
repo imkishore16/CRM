@@ -52,12 +52,11 @@ export default function HomeView() {
   const handleCreateSpace = async () => {
     setIsCreateSpaceOpen(false);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/api/spaces`, {
+      const response = await fetch(`/api/spaces/?spaceName=${spaceName}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ spaceName }),
       });
       const data = await response.json();
 
