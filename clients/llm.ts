@@ -19,9 +19,8 @@ import { HarmBlockThreshold, HarmCategory } from "@google/generative-ai"
 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY??"");
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 const llm = new ChatGoogleGenerativeAI({
-    // modelName: "gemini-pro",
     modelName: "gemini-2.0-flash",
     apiKey: process.env.GEMINI_API_KEY,
     maxOutputTokens: 8192,

@@ -1,0 +1,11 @@
+finetune llm using customer care words
+
+and agents
+
+add multiple chat prompts depending on jobRole
+
+Add more campaignVariables
+
+process queue
+
+create dashboard - sentiment analysis , collect possitive reviews and negative reviews

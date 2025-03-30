@@ -36,6 +36,23 @@ model SpaceCustomer {
   conversationStatus ConversationStatus
 }
 
+model Conversations {
+  id           Int    @id @default(autoincrement())
+  spaceId      Int
+  mobileNumber String
+  llm String
+  user String
+}
+
+// All Dashboard data
+// model Dashboard{
+//   id           Int    @id @default(autoincrement())
+//   spaceId      Int
+//   mobileNumber String
+
+
+// }
+
 enum Role {
   USER
   ADMIN
