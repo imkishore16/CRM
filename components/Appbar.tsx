@@ -22,7 +22,7 @@ export function Appbar({ showThemeSwitch = true }) {
         {appBar.appTitle}
       </div>
       <div className="flex items-center gap-x-2">
-        
+
         {session.data?.user && (
           <Button
             className="bg-purple-600 text-white hover:bg-purple-700"
@@ -37,17 +37,26 @@ export function Appbar({ showThemeSwitch = true }) {
         )}
         {!session.data?.user && (
           <div className="space-x-3">
-            <Button
-              className="bg-purple-600 text-white hover:bg-purple-700"
-              onClick={() => router.push("/auth")}
-            >
-              Signin
-            </Button>
             <Link
               href={{
                 pathname: "/auth",
                 query: {
-                  authType: "signUp",
+                  authType: "signIn",  // Use "signIn" here
+                },
+              }}
+            >
+              <Button
+                variant={"ghost"}
+                className="bg-purple-600 text-white hover:bg-purple-700"
+              >
+                Signin
+              </Button>
+            </Link>
+            <Link
+              href={{
+                pathname: "/auth",
+                query: {
+                  authType: "signUp",  // Use "signUp" here
                 },
               }}
             >
@@ -60,7 +69,7 @@ export function Appbar({ showThemeSwitch = true }) {
             </Link>
           </div>
         )}
-        
+
         {showThemeSwitch && <ThemeSwitcher />}
       </div>
     </div>
