@@ -9,16 +9,16 @@ datasource db {
 }
 
 model User {
-  id               Int      @id @default(autoincrement())
   name             String?
-  provider         String
   organizationName String?
   email            String   @unique
-  password         String
+  password         String?
   role             Role     @default(USER)
   avatar           String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  provider         Provider
+  id               Int      @id @default(autoincrement())
   createdSpaces    Space[]  @relation("createdBy")
 }
 
@@ -30,28 +30,20 @@ model Space {
 }
 
 model SpaceCustomer {
-  id           Int    @id @default(autoincrement())
-  spaceId      Int
-  mobileNumber String
+  id                 Int                @id @default(autoincrement())
+  spaceId            Int
+  mobileNumber       String
   conversationStatus ConversationStatus
 }
 
 model Conversations {
-  id           Int    @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   spaceId      Int
   mobileNumber String
-  llm String
-  user String
+  llm          String
+  user         String
+  createdAt    DateTime @default(now())
 }
-
-// All Dashboard data
-// model Dashboard{
-//   id           Int    @id @default(autoincrement())
-//   spaceId      Int
-//   mobileNumber String
-
-
-// }
 
 enum Role {
   USER
@@ -69,4 +61,11 @@ enum ConversationStatus {
   NOT_STARTED
   ONGOING
   COMPLETED
+}
+
+
+enum Provider {
+  Google
+  Credentials
+  Spotify
 }

@@ -27,7 +27,8 @@ export default async function LandingPage() {
                 with customers like never before.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button className="bg-black text-white hover:bg-gray-800 rounded-full px-8 py-6 text-base">
+                  
+                  <Button variant="outline" className="border-black text-white hover:bg-gray-100 hover:text-black rounded-full px-8 py-6 text-base">
                   <Link
                     href={{
                       pathname: "/auth",
@@ -39,7 +40,7 @@ export default async function LandingPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="border-black text-black hover:bg-gray-100 rounded-full px-8 py-6 text-base"
+                  className="border-black text-white hover:bg-gray-100 hover:text-black rounded-full px-8 py-6 text-base"
                 >
                   Learn More
                 </Button>

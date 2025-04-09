@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    
+    console.log("spaceName :" , spaceName);
     const result = await prisma.$transaction(async (prismaClient) => {
       const space = await prismaClient.space.create({
         data: {
@@ -34,7 +34,6 @@ export async function POST(req: NextRequest) {
           userId: session.user.id,
         },
       });
-      console.log("done")
       
       const spaceId = space.id;
       const indexName = "campaign" + spaceId;

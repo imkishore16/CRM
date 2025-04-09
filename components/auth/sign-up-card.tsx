@@ -1,33 +1,29 @@
-"use client";
-import { useState } from "react";
-import { FcGoogle } from "react-icons/fc";
-import { SiSpotify } from "react-icons/si"; // Import Spotify icon
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+"use client"
+import { useState } from "react"
+import type React from "react"
 
-import { SignInFlow } from "@/types/auth-types";
-import { TriangleAlert } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { FcGoogle } from "react-icons/fc"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
+import { Label } from "@/components/ui/label"
+import type { SignInFlow } from "@/types/auth-types"
+import { AlertCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 
 interface SignupCardProps {
-  setFormType: (state: SignInFlow) => void;
+  setFormType: (state: SignInFlow) => void
 }
 
-export default function SignupCard({ setFormType: setState }: SignupCardProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
-  const router = useRouter();
+export default function SignupCard({ setFormType }: SignupCardProps) {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [error, setError] = useState("")
+  const [pending, setPending] = useState(false)
+  const router = useRouter()
 
   const signInWithProvider = async (provider: "google" | "credentials" | "spotify") => {
     try {
@@ -36,128 +32,148 @@ export default function SignupCard({ setFormType: setState }: SignupCardProps) {
         password,
         redirect: false,
         callbackUrl: "/home",
-      });
-      
+      })
+
       res.then((res) => {
         if (res?.error) {
-          setError(res.error);
+          setError(res.error)
         } else {
-          router.push("/"); // Redirect on successful signup
+          router.push("/") // Redirect on successful signup
         }
-        setPending(false);
-      });
-      
+        setPending(false)
+      })
     } catch (error) {
-      console.log(error);
+      console.log(error)
     }
-  };
+  }
 
   const handlerCredentialSignup = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError("");
-    setPending(true);
+    e.preventDefault()
+    setError("")
+    setPending(true)
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      setPending(false);
-      return;
+      setError("Passwords do not match")
+      setPending(false)
+      return
     }
-    signInWithProvider("credentials");
-  };
+    signInWithProvider("credentials")
+  }
 
   const handleGoogleSignup = () => {
-    setError("");
-    setPending(true);
-    signInWithProvider("google");
-  };
-
-  const handleSpotifySignup = () => {
-    setError("");
-    setPending(true);
-    signInWithProvider("spotify");
-  };
+    setError("")
+    setPending(true)
+    signInWithProvider("google")
+  }
 
   return (
-    <Card className="h-full w-full border-purple-600 bg-gray-800 bg-opacity-50 p-8">
-      <CardHeader className="w-full">
-        <CardTitle className="text-center text-3xl font-bold text-white">
-          Signup to Start Listening
-        </CardTitle>
+    <Card className="w-full border border-gray-200 bg-white shadow-sm">
+      <CardHeader className="space-y-1 pb-6">
+        <CardTitle className="text-center text-2xl font-bold text-gray-900">Create an Account</CardTitle>
+        <p className="text-center text-sm text-gray-500">Enter your details to create your account</p>
       </CardHeader>
+
       {!!error && (
-        <div className="mb-6 flex w-full items-center gap-x-2 rounded-md bg-destructive p-3 text-sm text-white">
-          <TriangleAlert className="size-4 shrink-0" />
+        <div className="mx-6 mb-4 flex items-center gap-x-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
+          <AlertCircle className="h-4 w-4 shrink-0" />
           <p>{error}</p>
         </div>
       )}
-      <CardContent className="space-y-6 px-0 pb-0">
+
+      <CardContent className="space-y-6 px-6">
         <form className="space-y-4" onSubmit={handlerCredentialSignup}>
-          <Input
-            disabled={pending}
-            value={email}
-            placeholder="Email"
-            onChange={(e) => setEmail(e.target.value)}
-            className="border-gray-400 bg-transparent text-white placeholder:text-gray-400 focus-visible:ring-purple-600 focus-visible:ring-offset-0"
-            type="email"
-            required
-          />
-          <Input
-            disabled={pending}
-            value={password}
-            placeholder="Password"
-            onChange={(e) => setPassword(e.target.value)}
-            className="border-gray-400 bg-transparent text-white placeholder:text-gray-400 focus-visible:ring-purple-600 focus-visible:ring-offset-0"
-            type="password"
-            required
-          />
-          <Input
-            disabled={pending}
-            value={confirmPassword}
-            placeholder="Confirm Password"
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="border-gray-400 bg-transparent text-white placeholder:text-gray-400 focus-visible:ring-purple-600 focus-visible:ring-offset-0"
-            type="password"
-            required
-          />
-          <Button
-            type="submit"
-            className="w-full bg-purple-600 hover:bg-purple-700"
-            size={"lg"}
-            disabled={pending}
-          >
-            Continue
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-gray-700">
+              Email
+            </Label>
+            <Input
+              id="email"
+              disabled={pending}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              className="border-gray-300 focus:border-black focus:ring-black"
+              type="email"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-gray-700">
+              Password
+            </Label>
+            <Input
+              id="password"
+              disabled={pending}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="border-gray-300 focus:border-black focus:ring-black"
+              type="password"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password" className="text-gray-700">
+              Confirm Password
+            </Label>
+            <Input
+              id="confirm-password"
+              disabled={pending}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              className="border-gray-300 focus:border-black focus:ring-black"
+              type="password"
+              required
+            />
+          </div>
+
+          <Button type="submit" className="w-full bg-black text-white hover:bg-gray-800" disabled={pending}>
+            {pending ? (
+              <>
+                <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                Creating account...
+              </>
+            ) : (
+              "Create Account"
+            )}
           </Button>
         </form>
-        <Separator className="bg-gradient-to-r from-gray-800 via-neutral-500 to-gray-800" />
-        <div className="flex flex-col items-center gap-y-2.5">
-          <Button
-            disabled={pending}
-            onClick={handleGoogleSignup}
-            size={"lg"}
-            className="relative w-full bg-white text-black hover:bg-white/90"
-          >
-            <FcGoogle className="absolute left-2.5 top-3 size-5" />
-            Continue with Google
-          </Button>
-          {/* <Button
-            disabled={pending}
-            onClick={handleSpotifySignup}
-            size={"lg"}
-            className="relative w-full bg-green-600 text-white hover:bg-green-700"
-          >
-            <SiSpotify className="absolute left-2.5 top-3 size-5" />
-            Continue with Spotify
-          </Button> */}
-          <p className="text-xs text-muted-foreground">
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <Separator className="w-full" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-white px-2 text-gray-500">or continue with</span>
+          </div>
+        </div>
+
+        <Button
+          disabled={pending}
+          onClick={handleGoogleSignup}
+          variant="outline"
+          className="relative w-full border-gray-300 hover:bg-gray-50"
+        >
+          <FcGoogle className="mr-2 h-5 w-5" />
+          Google
+        </Button>
+
+        <div className="text-center text-sm">
+          <p className="text-gray-600">
             Already have an account?{" "}
-            <span
-              className="cursor-pointer text-sky-700 hover:underline"
-              onClick={() => setState("signIn")}
+            <button
+              type="button"
+              className="font-medium text-black hover:underline"
+              onClick={() => setFormType("signIn")}
             >
               Sign in
-            </span>
+            </button>
           </p>
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
+

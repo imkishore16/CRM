@@ -1,12 +1,21 @@
+
 "use client"
 
-import { useState, use } from "react"
+import { useState, use, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, PlayCircle } from "lucide-react"
+import { Loader2, PlayCircle, MessageSquare, X, Send, ChevronRight, ChevronLeft } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 interface CampaignPageProps {
   params: Promise<{ spaceId: string }>
+}
+
+interface Message {
+  id: number
+  text: string
+  sender: "user" | "bot"
 }
 
 export default function CampaignPage({ params }: CampaignPageProps) {
@@ -14,21 +23,28 @@ export default function CampaignPage({ params }: CampaignPageProps) {
   const { spaceId } = unwrappedParams
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [chatExpanded, setChatExpanded] = useState(false)
+
+  // Chat state
+  const [messages, setMessages] = useState<Message[]>([
+    { id: 1, text: "Hello! I'm your AI assistant. How can I help you today?", sender: "bot" },
+  ])
+  const [input, setInput] = useState<string>("")
+  const [isChatLoading, setIsChatLoading] = useState<boolean>(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const startCampaign = async () => {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`/api/campaign/spaceId=${spaceId}`, {
+      const response = await fetch(`/api/campaign/?spaceId=${spaceId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ spaceId }),
       })
 
       if (response.ok) {
-        const data = await response.json()
         toast({
           title: "Campaign Started",
           description: "Your campaign has been successfully started.",
@@ -48,46 +64,237 @@ export default function CampaignPage({ params }: CampaignPageProps) {
     }
   }
 
+  const handleSendMessage = async () => {
+    if (!input.trim()) return
+
+    // Add user message
+    const userMessage: Message = {
+      id: messages.length + 1,
+      text: input,
+      sender: "user",
+    }
+    setMessages((prev) => [...prev, userMessage])
+    setInput("")
+    setIsChatLoading(true)
+
+    // Scroll to bottom
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 100)
+
+    try {
+      const response = await fetch(`/api/sampleChat/?spaceId=${spaceId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ input:input }),
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const botMessage: Message = {
+          id: messages.length + 2,
+          text: data.message,
+          sender: "bot",
+        }
+        setMessages((prev) => [...prev, botMessage])
+        toast({
+          title: "Campaign Started",
+          description: "Your campaign has been successfully started.",
+        })
+      } else {
+        const error = await response.json()
+        throw new Error(error.message || "Failed to start campaign")
+      }
+    } catch (error) {
+      console.error("Error in chat:", error)
+      toast({
+        title: "Chat Error",
+        description: "Failed to get a response. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsChatLoading(false)
+
+      // Scroll to bottom again after response
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+      }, 100)
+    }
+  }
+
   return (
-    <div className="container py-10">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Campaign Management</h1>
+    <div className="flex h-[calc(100vh-4rem)]">
+      {/* Main content */}
+      <div className={cn("flex-1 overflow-auto transition-all duration-300", chatExpanded ? "mr-[400px]" : "mr-0")}>
+        <div className="container py-8">
+          <div className="max-w-3xl mx-auto">
+            <h1 className="text-3xl font-bold mb-6 text-gray-900">Campaign Management</h1>
 
-        <div className="bg-card border rounded-lg p-8 shadow-sm">
-          <div className="text-center">
-            <PlayCircle className="h-16 w-16 text-primary mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold mb-2">Ready to Launch Your Campaign?</h2>
-            <p className="text-muted-foreground mb-6">
-              Start your campaign to begin engaging with your audience. Make sure you have uploaded all necessary data.
-            </p>
+            <Card className="mb-8 border-gray-200">
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                    <PlayCircle className="h-8 w-8 text-black" />
+                  </div>
+                  <h2 className="text-2xl font-semibold mb-2 text-gray-900">Ready to Launch Your Campaign?</h2>
+                  <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+                    Start your campaign to begin engaging with your audience. Make sure you have uploaded all necessary
+                    data.
+                  </p>
 
-            <Button size="lg" onClick={startCampaign} disabled={isLoading} className="px-8">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Starting...
-                </>
-              ) : (
-                "Start Campaign"
+                  <Button
+                    size="lg"
+                    onClick={startCampaign}
+                    disabled={isLoading}
+                    className="px-8 bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Starting...
+                      </>
+                    ) : (
+                      "Start Campaign"
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium text-gray-900">Campaign Information</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-gray-600">
+                <p className="mb-4">
+                  This will initiate a campaign for Space ID:{" "}
+                  <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">{spaceId}</span>
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="rounded-full bg-gray-100 p-1 mt-0.5">
+                      <ChevronRight className="h-3 w-3 text-gray-600" />
+                    </div>
+                    <p>All uploaded data will be used for this campaign</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="rounded-full bg-gray-100 p-1 mt-0.5">
+                      <ChevronRight className="h-3 w-3 text-gray-600" />
+                    </div>
+                    <p>The campaign will run according to your configured settings</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="rounded-full bg-gray-100 p-1 mt-0.5">
+                      <ChevronRight className="h-3 w-3 text-gray-600" />
+                    </div>
+                    <p>You can monitor progress in the analytics dashboard</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Chat panel */}
+      <div
+        className={cn(
+          "fixed top-16 bottom-0 right-0 bg-white border-l border-gray-200 transition-all duration-300 flex flex-col",
+          chatExpanded ? "w-[400px]" : "w-[50px]",
+        )}
+      >
+        {/* Toggle button */}
+        <button
+          onClick={() => setChatExpanded(!chatExpanded)}
+          className="absolute -left-10 top-4 bg-black text-white p-2 rounded-l-md hover:bg-gray-800"
+        >
+          {chatExpanded ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </button>
+
+        {chatExpanded ? (
+          <>
+            {/* Chat header */}
+            <div className="border-b border-gray-200 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-gray-700" />
+                <h3 className="font-medium text-gray-900">Test Chat</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-full"
+                onClick={() => setChatExpanded(false)}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+
+            {/* Chat messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn("flex", message.sender === "user" ? "justify-end" : "justify-start")}
+                >
+                  <div
+                    className={cn(
+                      "max-w-[80%] rounded-lg p-3",
+                      message.sender === "user" ? "bg-black text-white" : "bg-gray-100 text-gray-800",
+                    )}
+                  >
+                    {message.text}
+                  </div>
+                </div>
+              ))}
+
+              {isChatLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 text-gray-800 p-3 rounded-lg">
+                    <div className="flex space-x-2">
+                      <div className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"></div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </Button>
-          </div>
-        </div>
 
-        <div className="mt-8 bg-muted/50 rounded-lg p-6 border">
-          <h3 className="font-medium mb-2">Campaign Information</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            This will initiate a campaign for Space ID:{" "}
-            <span className="font-mono bg-muted px-1 py-0.5 rounded">{spaceId}</span>
-          </p>
-          <div className="text-sm space-y-2">
-            <p>• All uploaded data will be used for this campaign</p>
-            <p>• The campaign will run according to your configured settings</p>
-            <p>• You can monitor progress in the analytics dashboard</p>
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Chat input */}
+            <div className="border-t border-gray-200 p-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                  placeholder="Type your message..."
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+                  disabled={isChatLoading}
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={isChatLoading || !input.trim()}
+                  className="bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors"
+                >
+                  <Send className="h-4 w-4" />
+                  <span className="sr-only">Send</span>
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <MessageSquare className="h-5 w-5 text-gray-400" />
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
 }
+
 

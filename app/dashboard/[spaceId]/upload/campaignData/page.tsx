@@ -166,7 +166,8 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
               id="campaignName"
               value={campaignName}
               onChange={(e) => setCampaignName(e.target.value)}
-              className={errors.campaignName ? "border-red-500" : ""}
+              className={errors.campaignName ? "border-red-500" : "bg-white"}
+              placeholder="Enter the name of your campaign"
             />
             {errors.campaignName && <p className="text-red-500 text-xs">{errors.campaignName}</p>}
           </div>
@@ -177,7 +178,7 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
               Campaign Type <span className="text-red-500">*</span>
             </Label>
             <Select value={campaignType} onValueChange={setCampaignType}>
-              <SelectTrigger className={errors.campaignType ? "border-red-500" : ""}>
+              <SelectTrigger className={errors.campaignType ? "border-red-500" : "bg-white"}>
                 <SelectValue placeholder="Select campaign type" />
               </SelectTrigger>
               <SelectContent>
@@ -194,19 +195,25 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
           {/* Override Company */}
           <div className="space-y-2">
             <Label htmlFor="overrideCompany">Override Company</Label>
-            <Input id="overrideCompany" value={overrideCompany} onChange={(e) => setOverrideCompany(e.target.value)} />
+            <Input id="overrideCompany" value={overrideCompany} onChange={(e) => setOverrideCompany(e.target.value)}
+            className={errors.campaignName ? "border-red-500" : "bg-white"}
+            placeholder=" The exact name of the creator or sub-brand." />
           </div>
 
           {/* Override Persona - Name */}
           <div className="space-y-2">
             <Label htmlFor="personaName">Persona Name</Label>
-            <Input id="personaName" value={personaName} onChange={(e) => setPersonaName(e.target.value)} />
+            <Input id="personaName" value={personaName} onChange={(e) => setPersonaName(e.target.value)} 
+            className={errors.campaignName ? "border-red-500" : "bg-white"}
+            placeholder="Select a relatable and neutral name that fits the role."/>
           </div>
 
           {/* Override Persona - Job Role */}
           <div className="space-y-2">
             <Label htmlFor="jobRole">Job Role</Label>
-            <Input id="jobRole" value={jobRole} onChange={(e) => setJobRole(e.target.value)} />
+            <Input id="jobRole" value={jobRole} onChange={(e) => setJobRole(e.target.value)} 
+            className={errors.campaignName ? "border-red-500" : "bg-white"}
+            placeholder="This reflects the role AI is playing in the campaign."/>
           </div>
 
           {/* Campaign Objective */}
@@ -218,7 +225,8 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
               id="campaignObjective"
               value={campaignObjective}
               onChange={(e) => setCampaignObjective(e.target.value)}
-              className={errors.campaignObjective ? "border-red-500" : ""}
+              className={errors.campaignObjective ? "border-red-500" : "bg-white"}
+              placeholder="what the AI should accomplish in the interaction."
             />
             {errors.campaignObjective && <p className="text-red-500 text-xs">{errors.campaignObjective}</p>}
           </div>
@@ -226,7 +234,7 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
 
         {/* Communication Style */}
         <div className="space-y-2">
-          <Label className={errors.communicationStyle ? "text-red-500" : ""}>
+          <Label className={errors.communicationStyle ? "text-red-500" : "bg-white"}>
             Communication Style <span className="text-red-500">*</span>
           </Label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

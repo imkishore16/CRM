@@ -64,23 +64,6 @@ export async function POST(req: NextRequest) {
 
                 const text = `${campaignName} ${campaignType} ${campaignObjective}`; 
                 const embeddings = await embeddingModel.embedQuery(text);
-                // const vector = {
-                //   id: randomUUID(),
-                //   values: embeddings,
-                //   metadata: { 
-                //     source:"variables",
-                //     campaignName:campaignName ,
-                //     campaignType:campaignType, 
-                //     overrideCompany:overrideCompany ,
-                //     personaName:personaName ,
-                //     jobRole:jobRole,
-                //     campaignObjective:campaignObjective,
-                //     communicationStyles:communicationStyles,
-                //     initialMessage:initialMessage,
-                //     followUpMessage:followUpMessage
-                //   },
-                // }
-                // await index.namespace("variables").upsert([vector]);
                 
                 const campaignNameVector = {
                   id: randomUUID(),
@@ -471,36 +454,32 @@ export async function readFileContent(file: File): Promise<string> {
           case "pdf":
               try {
                 const tempFilePath = `/tmp/${file.name}.pdf`;
-
+                let parsedText = "";
+                
                 // Convert ArrayBuffer to Buffer
                 const fileBuffer = Buffer.from(await file.arrayBuffer());
 
                 // Save the buffer as a file
                 await fs.writeFile(tempFilePath, fileBuffer);
-
-                // Create a new Promise for parsing
-                const pdfParser = new (PDFParser as any)(null, 1);
-
-                // Create a promise to handle the parsing
-                const parsingPromise = new Promise((resolve, reject) => {
-                  console.log("In the promise");
+                await fs.writeFile(tempFilePath, fileBuffer);
+                
+                // Parse the PDF file
+                parsedText = await new Promise((resolve, reject) => {
+                  const pdfParser = new (PDFParser as any)(null, 1);
+                  
                   pdfParser.on("pdfParser_dataError", (errData: any) => {
                     console.error(errData.parserError);
-                    reject(errData.parserError); // Reject the promise on error
+                    reject(errData.parserError);
                   });
-
-                  pdfParser.on("pdfParser_dataReady", (parsedText:string) => {
-                    parsedText = (pdfParser as any).getRawTextContent();
-                    console.log("Parsed Text:", parsedText);
-                    resolve(parsedText); // Resolve the promise with parsed text
+        
+                  pdfParser.on("pdfParser_dataReady", () => {
+                    const text = (pdfParser as any).getRawTextContent();
+                    resolve(text);
                   });
+        
+                  pdfParser.loadPDF(tempFilePath);
                 });
-
-                // Load and parse the PDF
-                await pdfParser.loadPDF(tempFilePath);
-                await parsingPromise;
-                
-                
+                return parsedText
               } catch (error) {
                   console.error('Error parsing PDF:', error);
                   throw new Error(`Failed to parse PDF: ${error}`);

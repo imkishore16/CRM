@@ -1,14 +1,18 @@
-import React from "react";
+interface LoadingScreenProps {
+  message?: string
+}
 
-export default function LoadingScreen() {
+export default function LoadingScreen({ message = "Loading..." }: LoadingScreenProps) {
   return (
-    <div className=" bg-[rgb(10,10,10)] text-gray-200">
-      <div className="flex space-x-2 justify-center items-center w-screen h-screen dark:invert">
-        <span className="sr-only">Loading...</span>
-        <div className="h-8 w-8 bg-white rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-        <div className="h-8 w-8 bg-white rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-        <div className="h-8 w-8 bg-white rounded-full animate-bounce"></div>
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-white">
+      <div className="flex flex-col items-center">
+        <div className="flex space-x-2 mb-4">
+          <div className="h-3 w-3 rounded-full bg-black animate-bounce [animation-delay:-0.3s]"></div>
+          <div className="h-3 w-3 rounded-full bg-black animate-bounce [animation-delay:-0.15s]"></div>
+          <div className="h-3 w-3 rounded-full bg-black animate-bounce"></div>
+        </div>
+        <p className="text-sm text-gray-600">{message}</p>
       </div>
     </div>
-  );
+  )
 }

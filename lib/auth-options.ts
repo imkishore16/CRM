@@ -4,24 +4,28 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import prisma from "./db";
+import { PrismaClient } from "@prisma/client";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { PrismaClientInitializationError } from "@prisma/client/runtime/library";
 
+const prisma = new PrismaClient();
 const emailSchema = z.string().email();
 const passwordSchema = z.string().min(8);
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
-    GoogleProvider({
+    GoogleProvider({      
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      httpOptions: {
+        timeout: 60000,
+      }
     }),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "password" },
+        email: { type: "email" },
+        password: { type: "password" }
       },
       async authorize(credentials) {
         if (!credentials || !credentials.email || !credentials.password) {
@@ -56,6 +60,7 @@ export const authOptions: NextAuthOptions = {
               id: newUser.id.toString(),
               email: newUser.email,
               name: newUser.name || null,
+              password:hashedPassword||null,
               provider: newUser.provider,
             };
           }
@@ -70,6 +75,7 @@ export const authOptions: NextAuthOptions = {
               id: updatedUser.id.toString(),
               email: updatedUser.email,
               name: updatedUser.name || null,
+              password:hashedPassword||null,
               provider: updatedUser.provider,
             };
           }
@@ -86,6 +92,7 @@ export const authOptions: NextAuthOptions = {
             id: user.id.toString(),
             email: user.email,
             name: user.name || null,
+            password:user.password||null,
             provider: user.provider,
           };
         } catch (error) {
@@ -103,64 +110,69 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, account, profile }) {
-      if (account && profile) {
-        token.email = profile.email as string;
-        token.id = account.access_token;
-
-        if (account.provider === "spotify") {
-          token.accessToken = account.access_token;
-        }
-      }
-      return token;
-    },
-    async session({ session, token }: { session: Session; token: JWT }) {
-      try {
-        const user = await prisma.user.findUnique({
-          where: { email: token.email },
-        });
-
-        if (user) {
-          session.user.id = user.id;
-        }
-
-        if (token.accessToken) {
-          session.user.accessToken = token.accessToken;
-        }
-      } catch (error) {
-        console.error("Session error:", error);
-        throw new Error("Internal server error");
-      }
-      return session;
-    },
     async signIn({ account, profile }) {
+      console.log('SignIn triggered with:', { account, profile });
       try {
-        console.log("Signin pagee")
-        if (account?.provider === "google" || account?.provider === "spotify") {
-          console.log("hererehediasjkdjk")
-          if (!profile?.email) {
-            throw new Error("Email is required");
-          }
-
+        if (account?.provider === "google" ) {
+          console.log("here indde singin ", profile)
           const user = await prisma.user.findUnique({
-            where: { email: profile.email },
+            where: {
+              email: profile?.email!,
+            }
           });
+
           if (!user) {
             await prisma.user.create({
               data: {
-                email: profile.email,
-                name: profile.name || undefined,
-                provider: account.provider === "google" ? "Google" : "Spotify",
-                password: "dummy_password", 
-              },
+                email: profile?.email!,
+                name: profile?.name || undefined,
+                provider: account?.provider === "google" ? "Google": "Spotify",
+              }
             });
           }
         }
         return true;
       } catch (error) {
-        console.error("Sign-in error:", error);
+        console.log(" provider error ",error);
         return false;
       }
     },
+    async jwt({ token, account, profile }) {
+      console.log('jwt  triggered with:', { account, profile });
+      if (account && profile) {
+        token.email = profile.email as string;
+        token.id = account.access_token;
+      }
+      return token;
+    },
+    async session({ session, token }: {
+      session: Session,
+      token: JWT;
+    }) {
+      console.log('session triggered with:', { session, token });
+      try {
+        const user = await prisma.user.findUnique({
+          where: { email: token.email }
+        });
+
+        if (user) {
+          session.user.id = user.id;
+        }
+        // Pass Spotify token to the session if using Spotify
+        if (token.accessToken) {
+          console.log("token.accessToken  ",token.accessToken)
+          session.user.accessToken = token.accessToken;
+        }
+        console.log("session",session);
+      } catch (error) {
+        if (error instanceof PrismaClientInitializationError) {
+          throw new Error("Internal server error");
+        }
+        console.log(error);
+        throw error;
+      }
+      return session;
+    },
+    
   },
 };

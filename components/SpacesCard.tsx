@@ -1,12 +1,14 @@
-"use client";
+"use client"
 
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Image from "next/image";
-import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { ArrowRight, Trash2 } from "lucide-react";
-import { useState } from "react";
+import type React from "react"
+
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import Image from "next/image"
+import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
+import { ArrowRight, Trash2, FolderOpen } from "lucide-react"
+import { useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -15,124 +17,104 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 
 interface SpaceCardProps {
   space: {
-    id: number;
-    name: string;
-  };
-  handleDeleteSpace: (id: number) => void;
+    id: number
+    name: string
+  }
+  handleDeleteSpace: (id: number) => void
 }
 
-export default function SpacesCard({
-  space,
-  handleDeleteSpace,
-}: SpaceCardProps) {
-  const router = useRouter();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [spaceToDelete, setSpaceToDelete] = useState<number | null>(null);
+export default function SpacesCard({ space, handleDeleteSpace }: SpaceCardProps) {
+  const router = useRouter()
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [spaceToDelete, setSpaceToDelete] = useState<number | null>(null)
 
-  const handleDeleteClick = (id: number) => {
-    setSpaceToDelete(id);
-    setIsDialogOpen(true);
-  };
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click from triggering
+    e.preventDefault() // Prevent default behavior
+    setSpaceToDelete(space.id)
+    setIsDialogOpen(true)
+  }
 
   const confirmDelete = () => {
     if (spaceToDelete) {
-      handleDeleteSpace(spaceToDelete);
-      setSpaceToDelete(null);
-      setIsDialogOpen(false);
+      handleDeleteSpace(spaceToDelete)
+      setSpaceToDelete(null)
+      setIsDialogOpen(false)
     }
-  };
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="p-4 md:p-6"
+      className="p-4"
     >
-      <Card className="w-full max-w-3xl overflow-hidden rounded-2xl border border-gray-700 bg-gray-800 transition-all duration-300 ease-in-out hover:shadow-[0_10px_20px_rgba(128,90,213,0.5)]">
+      <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-300">
         <CardContent className="p-0">
-          <motion.div
-            className="relative h-48 w-full sm:h-64 md:h-72 lg:h-80 xl:h-96"
-            whileHover={{ scale: 1.04 }}
-            transition={{ duration: 0.4 }}
-          >
+          <div className="relative h-48 overflow-hidden">
             <Image
-              src={
-                "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-              }
-              alt="Space image"
+              src="https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+              alt={`${space.name} space`}
               layout="fill"
               objectFit="cover"
-              className="rounded-t-2xl"
+              className="transition-transform duration-500 hover:scale-105"
             />
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 to-transparent"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+          </div>
 
-            <motion.div
-              className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-            >
-              <h2 className="mb-2 text-2xl font-bold tracking-tight text-white sm:text-3xl md:text-4xl lg:text-5xl">
-                {space.name}
-              </h2>
-            </motion.div>
-          </motion.div>
+          <div className="p-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="rounded-full bg-gray-100 p-2">
+                <FolderOpen className="h-5 w-5 text-gray-700" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 truncate">{space.name}</h2>
+            </div>
+            <p className="text-sm text-gray-600">Manage your data and configurations in this space.</p>
+          </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-2 p-4 sm:p-6 md:flex-row md:justify-between md:space-x-4 md:space-y-0">
+        <CardFooter className="flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-gray-50 p-4">
           <Button
-            variant="outline"
-            size="lg"
-            className="w-full rounded-lg border-purple-600 bg-purple-700 text-white shadow-md transition-colors duration-300 hover:bg-purple-600 hover:shadow-purple-600/50 md:w-auto"
+            className="w-full sm:flex-1 bg-black text-white hover:bg-white hover:text-black transition-colors"
             onClick={() => router.push(`/dashboard/${space.id}`)}
           >
-            <ArrowRight className="mr-2 h-5 w-5" />
+            <ArrowRight className="mr-2 h-4 w-4" />
             View Space
           </Button>
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                size="lg"
-                className="w-full rounded-lg border-gray-500 bg-gray-600 text-gray-200 shadow-md transition-colors duration-300 hover:bg-gray-700 hover:text-white hover:shadow-gray-500/50 md:w-auto"
-                onClick={() => handleDeleteClick(space.id)}
+                className="w-full sm:flex-1 bg-black text-white hover:bg-white hover:text-black transition-colors"
+                onClick={handleDeleteClick}
               >
-                <Trash2 className="mr-2 h-5 w-5" />
-                Delete Space
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-full sm:max-w-[425px]">
+            <DialogContent className="bg-white">
               <DialogHeader>
-                <DialogTitle>Confirm Deletion</DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to delete this space? This action cannot
-                  be undone.
+                <DialogTitle className="text-gray-900">Confirm Deletion</DialogTitle>
+                <DialogDescription className="text-gray-600">
+                  Are you sure you want to delete "{space.name}"? This action cannot be undone.
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
+              <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto border-gray-300 text-gray-700"
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  className="w-full rounded-lg bg-red-600 text-white shadow-md transition-colors duration-300 hover:bg-red-700 hover:shadow-red-500/50 sm:w-auto"
-                  onClick={confirmDelete}
-                >
-                  Confirm
+                <Button onClick={confirmDelete} className="w-full sm:w-auto bg-red-600 text-white hover:bg-red-700">
+                  Delete
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -140,5 +122,6 @@ export default function SpacesCard({
         </CardFooter>
       </Card>
     </motion.div>
-  );
+  )
 }
+

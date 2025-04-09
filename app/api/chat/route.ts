@@ -21,10 +21,14 @@ export interface CampaignVariables {
   followUpMessage: string;
 }
 
+const DEBOUNCE_SECONDS = 2;
+const REDIS_MESSAGE_PREFIX = 'whatsapp:pending:';
+
 async function parseFormEncodedBody(req: NextRequest) {
   const rawBody = await req.text(); 
   return Object.fromEntries(new URLSearchParams(rawBody)); 
 }
+
 export async function POST(req: NextRequest) {
     try {
       
@@ -41,47 +45,58 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
         }
 
+        //TODO : move this to redis
         const spaceCustomer = await prisma.spaceCustomer.findFirst({
           where: { mobileNumber: mobileNumber },
           select: { spaceId: true },
-      });
-      
-        const spaceId = spaceCustomer?.spaceId ?? 0;
-        const indexName="campaign"+spaceId;
-        const index = pc.index(indexName , `https://${indexName}-${process.env.PINECONE_URL}`);
-
-        const pastConversations = await fetchConversationHistory(query,mobileNumber,index);
-        console.log(2)
-        
-        const combinedConversations = pastConversations.join("\n");
-        console.log(3)
-        
-        const relevantDocs = await similaritySearch(query, index);
-        console.log(4)
-        
-        const campaignVariables = await handleCampaignVariables(index,spaceId || 0);
-
-        const response = await generateResponse(query,relevantDocs,combinedConversations ,campaignVariables);
-        console.log(5)
-        
-        await saveConversation(mobileNumber, query, response,index);
-        
-        await prisma.conversations.create({
-          data: {
-              spaceId: spaceId,
-              mobileNumber: mobileNumber,
-              user:query, 
-              llm:response,
-          },
-        })
-        
-        await twilioClient.messages.create({
-          body: response,
-          from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, 
-          to: `whatsapp:${mobileNumber}` 
         });
 
-        return NextResponse.json({ message: response }, { status: 200 });
+      const spaceId = spaceCustomer?.spaceId ?? 0;
+      // Create a unique key for this user based on spaceId and mobileNumber
+      const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
+      const processingKey = `${userKey}:processing`;
+
+      await addMessageToRedis(userKey, query);
+
+      const isProcessing = await redis.get(processingKey);
+
+      if (!isProcessing) {
+        // Set processing flag with expiration
+        await redis.set(processingKey, "true", "EX", DEBOUNCE_SECONDS);
+        
+        // Schedule processing after debounce period
+        setTimeout(async () => {
+            await processAggregatedMessages(mobileNumber, spaceId);
+        }, DEBOUNCE_SECONDS * 1000);
+    }
+
+        // const indexName="campaign"+spaceId;
+        // const index = pc.index(indexName , `https://${indexName}-${process.env.PINECONE_URL}`);
+        // const pastConversations = await fetchConversationHistory(query,mobileNumber,index);
+        // const combinedConversations = pastConversations.join("\n");
+        // const relevantDocs = await similaritySearch(query, index);
+        // const campaignVariables = await handleCampaignVariables(index,spaceId || 0);
+        // const response = await generateResponse(query,relevantDocs,combinedConversations ,campaignVariables);
+        
+        // await saveConversation(mobileNumber, query, response,index); // in vec Db
+        // save conversation in redis
+        // save conversation in db from redis 
+        // await prisma.conversations.create({
+        //   data: {
+        //       spaceId: spaceId,
+        //       mobileNumber: mobileNumber,
+        //       user:query, 
+        //       llm:response,
+        //   },
+        // })
+        
+        // await twilioClient.messages.create({
+        //   body: response,
+        //   from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, 
+        //   to: `whatsapp:${mobileNumber}` 
+        // });
+
+        return NextResponse.json({ message: "Message recived and replied" }, { status: 200 });
 
     } catch (error) {
         console.error("Error processing request:", error);
@@ -90,7 +105,7 @@ export async function POST(req: NextRequest) {
 }
 
 
-async function saveConversation(mobileNumber: string, query: string, response: string, index: any): Promise<void> {
+async function saveConversationToVecDb(mobileNumber: string, query: string, response: string, index: any): Promise<void> {
   try {
     const [queryEmbedding, responseEmbedding] = await Promise.all([
       embeddingModel.embedQuery(query),
@@ -101,38 +116,53 @@ async function saveConversation(mobileNumber: string, query: string, response: s
     
     await index.namespace(mobileNumber).upsert([
       {
-        id: `query_${Date.now()}`, 
+        id: `query_resp_${Date.now()}`, 
         values: queryEmbedding,
         metadata: {
           type: 'query',
-          text: query,
+          query: query,
+          resposne: response,
           response_id: `resp_${Date.now()}`, 
           summary: summary,
-          // threadId: 1,    
           timestamp: new Date().toISOString(),
         },
       },
-      {
-        id: `resp_${Date.now()}`, 
-        values: responseEmbedding,
-        metadata: {
-          type: 'response',
-          text: response,
-          query_id: `query_${Date.now()}`, 
-          summary: summary,
-          // threadId: 1,
-          timestamp: new Date().toISOString(),
-        },
-      }
     ]);
   } catch (error) {
     console.error("Error saving conversation:", error);
   }
 }
 
-async function fetchConversationHistory(query:string , mobileNumber: string , index:any): Promise<string[]> {
+async function fetchEnhancedConversationHistory(query: string, mobileNumber: string, index: any): Promise<string[]> {
+  try {
+    const recentConversations = await fetchRecentConversations(mobileNumber, 3); // Last 3 exchanges
+    const allConversations = [...recentConversations];
+    
+    const similarConversations = await fetchSimilarConversations(query, mobileNumber, index);
+    
+    
+    for (const conv of similarConversations) {
+      if (!allConversations.some(recent => recent.timestamp === conv.timestamp)) {
+        allConversations.push(conv);
+      }
+    }
+    
+    return allConversations.map(conv => 
+      `User Query: ${conv.query}\nLLM Reply: ${conv.response}\nTimestamp: ${conv.timestamp}`
+    );
+  } catch (error) {
+    console.error("Error fetching enhanced conversation history:", error);
+    return [];
+  }
+}
+
+async function fetchSimilarConversations(query:string , mobileNumber: string , index:any):Promise<Array<{
+  id: string;
+  query: string;
+  response: string;
+  timestamp: string;
+}>> {
     try {
-      const queryEmbedding = await embeddingModel.embedQuery(query)
       const stats = await index.describeIndexStats();
       if (stats.namespaces && stats.namespaces[mobileNumber]) {
         console.log(`Namespace "${mobileNumber} exists".`);
@@ -140,28 +170,63 @@ async function fetchConversationHistory(query:string , mobileNumber: string , in
         console.log(`Namespace "${mobileNumber}" does not exist in index ".`);
         return [];
       }
-
+      
+      const queryEmbedding = await embeddingModel.embedQuery(query)
       const queryResponse = await index.namespace(mobileNumber).query({
         vector:queryEmbedding,
         topK: 10, 
         includeMetadata: true,
-        // filter: { threadId: "latest" } 
       });
   
       if (!queryResponse.matches || queryResponse.matches.length === 0) {
         return [];
       }
-  
-      const conversations = queryResponse.matches.map((match:any) => {
+      
+      return queryResponse.matches
+      .filter((match:any) => match.metadata)
+      .map((match :any) => {
         const metadata = match.metadata;
-        return `User Query: ${metadata.user_query}\nLLM Reply: ${metadata.llm_reply}`;
+        return {
+          query: metadata.text || metadata.query || "",
+          response: metadata.response || "",
+          timestamp: metadata.timestamp || new Date().toISOString(),
+        };
       });
-      console.log("conversations : " , conversations);
-      return conversations;
+
     } catch (error) {
       console.error("Error fetching conversation history:", error);
       return [];
     }
+}
+
+async function fetchRecentConversations(mobileNumber: string , limit : number): Promise<Array<{
+  query: string;
+  response: string;
+  timestamp: string;
+}>> {
+  try {
+    // Query the database for the most recent conversations
+    const recentConversations = await prisma.conversations.findMany({
+      where: {
+        mobileNumber: mobileNumber
+      },
+      orderBy: {
+        createdAt: 'desc' 
+      },
+      take: limit
+    });
+    
+    // Format the data for consistency with vector retrieval
+    return recentConversations.map(conv => ({
+      query: conv.user,
+      response: conv.llm,
+      timestamp: conv.createdAt.toISOString(),
+    })).reverse(); // Reverse to get chronological order (oldest first)
+    
+  } catch (error) {
+    console.error("Error fetching recent conversations:", error);
+    return [];
+  }
 }
 
 async function handleCampaignVariables(index:any,spaceId:number): Promise<CampaignVariables>{
@@ -179,20 +244,71 @@ async function handleCampaignVariables(index:any,spaceId:number): Promise<Campai
   return campaignVariables;
 }
 
-// async function handleProductData(index:any,spaceId:number): Promise<string>{
-//   const cacheKey = `campaign${spaceId}`;
-  
-//   const cachedData = await redis.get(cacheKey);
-//   if (cachedData) {
-//     return JSON.parse(cachedData);
-//   }
 
-//   const productData = fetchProductDataFromVectorDB(index,spaceId)
-  
-//   await redis.set(cacheKey, productData, "EX", 7200);
+async function addMessageToRedis(userKey: string, message: string): Promise<void> {
+  const timestamp = Date.now();
+  // Store as a list of timestamped messages
+  await redis.rpush(userKey, JSON.stringify({ message, timestamp }));
+  // Set expiration on the key to auto-cleanup (15 seconds should be plenty)
+  await redis.expire(userKey, 15);
+}
 
-//   return productData;
-// }
+async function processAggregatedMessages(mobileNumber: string, spaceId: number): Promise<void> {
+  const userKey = `${spaceId}:${mobileNumber}`;
+  const processingKey = `${userKey}:processing`;
+  
+  try {
+      // Get all messages
+      const messageItems = await redis.lrange(userKey, 0, -1);
+      
+      if (messageItems.length === 0) {
+          return;
+      }
+      
+      const messages = messageItems.map(item => JSON.parse(item).message);
+      const combinedQuery = messages.join(" ");
+      
+      console.log(`Processing aggregated messages for ${mobileNumber}:`, combinedQuery);
+      
+      // Process the query using your existing logic
+      const indexName = "campaign" + spaceId;
+      const index = pc.index(indexName, `https://${indexName}-${process.env.PINECONE_URL}`);
+      
+      const pastConversations = await fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index);
+      const combinedConversations = pastConversations.join("\n");
+      const relevantDocs = await similaritySearch(combinedQuery, index);
+      const campaignVariables = await handleCampaignVariables(index, spaceId);
+      const response = await generateResponse(combinedQuery, relevantDocs, combinedConversations, campaignVariables);
+      
+      // Save the conversation
+      await saveConversationToVecDb(mobileNumber, combinedQuery, response, index);
+      
+      await prisma.conversations.create({
+          data: {
+              spaceId: spaceId,
+              mobileNumber: mobileNumber,
+              user: combinedQuery, 
+              llm: response,
+          },
+      });
+      
+      // Send the response via Twilio
+      await twilioClient.messages.create({
+          body: response,
+          from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, 
+          to: `whatsapp:${mobileNumber}` 
+      });
+      
+      // Clean up Redis after processing
+      await redis.del(userKey);
+      await redis.del(processingKey);
+      
+  } catch (error) {
+      console.error(`Error processing messages for ${mobileNumber}:`, error);
+      // Clean up to prevent stuck messages
+      await redis.del(processingKey);
+  }
+}
 
 async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promise<CampaignVariables> {
   try {
@@ -239,11 +355,9 @@ async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promi
       }
     }
     
-    // Check if we found any data at all
     const hasData = Object.values(campaignData).some(value => value !== "");
     
     if (!hasData) {
-      // Return default values if no data found
       return {
         campaignName: "Default Campaign",
         campaignType: "Standard",
@@ -261,7 +375,6 @@ async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promi
     
   } catch (error) {
     console.error("Error fetching campaign data from vector DB:", error);
-    // Return default values if there's an error
     return {
       campaignName: "Default Campaign",
       campaignType: "Standard",
@@ -280,21 +393,6 @@ async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promi
 async function similaritySearch(query: string, index:any) {
     try {
 
-        // const queryEmbedding  = await embeddingModel.embedQuery(query)
-        //   const [vectorResults, keywordResults] = await Promise.all([
-          //     index.namespace("productdata").query({
-            //         vector: queryEmbedding,
-            //         topK: 3,
-            //         includeValues: true,
-            //     }),
-            //     keywordSearch(query),  // 🔥 BM25-based retrieval
-            // ]);
-            // const combinedResults = [...vectorResults.matches, ...keywordResults];
-            // const rankedResults = await reRankResults(query, combinedResults);
-            
-            // return rankedResults.map((result: any) => result.metadata?.text || "").join("\n");
-            
-            
         const queryEmbedding  = await embeddingModel.embedQuery(query)
         const queryResponse = await index.namespace("productdata").query({
             vector: queryEmbedding ,
@@ -320,7 +418,6 @@ async function similaritySearch(query: string, index:any) {
 
 async function reRankResults(query: string, results: any[]): Promise<any[]> {
   try {
-    // Format prompt as a proper message
     const messages = [
       new HumanMessage(`
         Given the user query: "${query}", re-rank the following results in order of relevance:
@@ -333,13 +430,10 @@ async function reRankResults(query: string, results: any[]): Promise<any[]> {
       `)
     ];
 
-    // Use invoke instead of generateText
     const response = await llm.invoke(messages);
     
-    // Extract content from the response
     const responseText = response.content.toString();
     
-    // Find and extract the JSON portion from the response
     const jsonMatch = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/);
     if (!jsonMatch) {
       throw new Error("Could not extract JSON from response");
@@ -347,10 +441,8 @@ async function reRankResults(query: string, results: any[]): Promise<any[]> {
     
     const rankedResults = JSON.parse(jsonMatch[0]);
 
-    // Map back to your original format
     return rankedResults.map((item: any) => ({
       metadata: { text: item.text },
-      // Preserve any other fields from original results if needed
       rank: item.rank
     }));
   } catch (error) {
@@ -395,7 +487,6 @@ async function summarizeConversation(query: string, response: string): Promise<s
     
     const summary = result.content.toString().trim();
     
-    // Verify we got a reasonable summary
     if (summary.length < 10) {
       throw new Error("Summary too short");
     }

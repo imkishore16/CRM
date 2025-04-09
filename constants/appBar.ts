@@ -1,3 +1,3 @@
 export const appBar={
-    appTitle:"Sales Bot"
+    appTitle:"CRM.io"
 }

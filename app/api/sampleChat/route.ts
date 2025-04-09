@@ -8,6 +8,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import redis from "@/clients/redis";
 import twilio from 'twilio';
 import twilioClient from "@/clients/twilioClient";
+import prisma from "@/lib/db";
 export interface CampaignVariables {
   campaignName: string;
   campaignType: string;
@@ -20,6 +21,10 @@ export interface CampaignVariables {
   followUpMessage: string;
 }
 
+
+const DEBOUNCE_SECONDS = 2;
+const REDIS_MESSAGE_PREFIX = 'whatsapp:pending:';
+
 async function parseFormEncodedBody(req: NextRequest) {
   const rawBody = await req.text();
   return Object.fromEntries(new URLSearchParams(rawBody)); 
@@ -27,37 +32,36 @@ async function parseFormEncodedBody(req: NextRequest) {
 
 export async function POST(req: NextRequest ) {
     try {
+        const { searchParams } = new URL(req.url);
+
+        const spaceId = parseInt(searchParams.get("spaceId") ?? "0")
         const data= await req.json();
         const query = data.query as string;
-        const mobileNumber="9445422734"
-        console.log(query)
+        const mobileNumber=data.mobileNumber || "1234567890"
         if (!query) {
-            return NextResponse.json({ error: "Query is required" }, { status: 400 });
-        }
+          return NextResponse.json({ error: "Query is required" }, { status: 400 });
+      }
+      if (!mobileNumber) {
+          console.log("no mobile numbner")
+          return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
+      }
 
-        const spaceId = 9
-        const indexName="campaign"+spaceId;
-        const index = pc.index(indexName , `https://${indexName}-${process.env.PINECONE_URL}`);
+      const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
+      const processingKey = `${userKey}:processing`;
 
-        console.log(1)
-        const pastConversations = await fetchConversationHistory(query,mobileNumber,index);
-        console.log("pastConversations : " , pastConversations)
-        console.log(2)
-        
-        // const summarizedHistory = await summarizeConversation(pastConversations);
-        const combinedConversations = pastConversations.join("\n");
-        console.log("combinedConversations : " , combinedConversations)
-        
-        const relevantDocs = await similaritySearch(query, index);
-        console.log("relevantDocs : ", relevantDocs)
-        
-        const campaignVariables = await handleCampaignVariables(index,spaceId || 9);
+      const response = await addMessageToRedis(userKey, query);
 
-        const response = await generateResponse(query,relevantDocs,combinedConversations ,campaignVariables);
-        console.log(5)
+      const isProcessing = await redis.get(processingKey);
+
+      if (!isProcessing) {
+        // Set processing flag with expiration
+        await redis.set(processingKey, "true", "EX", DEBOUNCE_SECONDS);
         
-        await saveConversation(mobileNumber, query, response,index);
-        console.log(6)
+        // Schedule processing after debounce period
+        setTimeout(async () => {
+            await processAggregatedMessages(mobileNumber, spaceId);
+        }, DEBOUNCE_SECONDS * 1000);
+      }
 
 
       return NextResponse.json({ message: response }, { status: 200 });
@@ -67,20 +71,8 @@ export async function POST(req: NextRequest ) {
     }
 }
 
-
-async function saveConversation(
-  mobileNumber: string, 
-  query: string, 
-  response: string, 
-  index: any
-): Promise<void> {
+async function saveConversationToVecDb(mobileNumber: string, query: string, response: string, index: any): Promise<void> {
   try {
-    // Create timestamps once to ensure consistency
-    const queryId = `query_${Date.now()}`;
-    const responseId = `resp_${Date.now()}`;
-    const timestamp = new Date().toISOString();
-    
-    // Create embeddings for both query and response
     const [queryEmbedding, responseEmbedding] = await Promise.all([
       embeddingModel.embedQuery(query),
       embeddingModel.embedQuery(response)
@@ -88,88 +80,133 @@ async function saveConversation(
     
     const summary = await summarizeConversation(query, response);
     
-    // Save query and response with their embeddings
     await index.namespace(mobileNumber).upsert([
       {
-        id: queryId,
+        id: `query_resp_${Date.now()}`, 
         values: queryEmbedding,
         metadata: {
           type: 'query',
-          text: query,
-          user_query: query,  // Adding this for consistency with fetch
-          response_id: responseId,
+          query: query,
+          resposne: response,
+          response_id: `resp_${Date.now()}`, 
           summary: summary,
-          timestamp: timestamp,
+          timestamp: new Date().toISOString(),
         },
       },
-      {
-        id: responseId,
-        values: responseEmbedding,
-        metadata: {
-          type: 'response',
-          text: response,
-          llm_reply: response,  // Adding this for consistency with fetch
-          query_id: queryId,
-          summary: summary,
-          timestamp: timestamp,
-        },
-      }
+      // {
+      //   id: `resp_${Date.now()}`, 
+      //   values: responseEmbedding,
+      //   metadata: {
+      //     type: 'response',
+      //     text: response,
+      //     query_id: `query_${Date.now()}`, 
+      //     summary: summary,
+      //     // threadId: 1,
+      //     timestamp: new Date().toISOString(),
+      //   },
+      // }
     ]);
   } catch (error) {
     console.error("Error saving conversation:", error);
-    throw error;  // Re-throw to allow caller to handle
   }
 }
 
-async function fetchConversationHistory(
-  query: string, 
-  mobileNumber: string, 
-  index: any
-): Promise<string[]> {
+async function fetchEnhancedConversationHistory(query: string, mobileNumber: string, index: any): Promise<string[]> {
   try {
-    const queryEmbedding = await embeddingModel.embedQuery(query);
+    // Get most recent conversations (for continuity)
+    const recentConversations = await fetchRecentConversations(mobileNumber, 3); // Last 3 exchanges
+    // Merge and deduplicate (recent conversations take precedence)
+    const allConversations = [...recentConversations];
     
-    // Check if namespace exists
-    const stats = await index.describeIndexStats();
-    if (!stats.namespaces || !stats.namespaces[mobileNumber]) {
-      console.log(`Namespace "${mobileNumber}" does not exist in index.`);
-      return [];
-    }
+    // Get semantically similar conversations
+    const similarConversations = await fetchSimilarConversations(query, mobileNumber, index);
     
-    const queryResponse = await index.namespace(mobileNumber).query({
-      vector: queryEmbedding,
-      topK: 10,
-      includeMetadata: true,
-    });
     
-    if (!queryResponse.matches || queryResponse.matches.length === 0) {
-      return [];
-    }
-    
-    // Format and return conversations
-    const conversations = queryResponse.matches.map((match: any) => {
-      const metadata = match.metadata;
-      // Use the consistent fields or fall back to text field
-      const userQuery = metadata.user_query || metadata.text || "Unknown query";
-      let llmReply = "Unknown reply";
-      
-      // For response types, use llm_reply or text
-      if (metadata.type === 'response') {
-        llmReply = metadata.llm_reply || metadata.text || "Unknown reply";
+    // Add similar conversations that aren't already included in recent ones
+    for (const conv of similarConversations) {
+      if (!allConversations.some(recent => recent.timestamp === conv.timestamp)) {
+        allConversations.push(conv);
       }
-      // For query types, try to find the corresponding response
-      else if (metadata.type === 'query' && metadata.response_id) {
-        // You might need to fetch the corresponding response separately
-        // This is just a placeholder for the concept
-        llmReply = "Response would need to be fetched separately";
-      }
-      
-      return `User Query: ${userQuery}\nLLM Reply: ${llmReply}`;
-    });
-    
-    return conversations;
+    }
+    // Format for context window
+    return allConversations.map(conv => 
+      `User Query: ${conv.query}\nLLM Reply: ${conv.response}\nTimestamp: ${conv.timestamp}`
+    );
   } catch (error) {
-    console.error("Error fetching conversation history:", error);
+    console.error("Error fetching enhanced conversation history:", error);
+    return [];
+  }
+}
+
+async function fetchSimilarConversations(query:string , mobileNumber: string , index:any):Promise<Array<{
+  id: string;
+  query: string;
+  response: string;
+  timestamp: string;
+}>> {
+    try {
+      const stats = await index.describeIndexStats();
+      if (stats.namespaces && stats.namespaces[mobileNumber]) {
+        console.log(`Namespace "${mobileNumber} exists".`);
+      } else {
+        console.log(`Namespace "${mobileNumber}" does not exist in index ".`);
+        return [];
+      }
+      
+      const queryEmbedding = await embeddingModel.embedQuery(query)
+      const queryResponse = await index.namespace(mobileNumber).query({
+        vector:queryEmbedding,
+        topK: 10, 
+        includeMetadata: true,
+      });
+  
+      if (!queryResponse.matches || queryResponse.matches.length === 0) {
+        return [];
+      }
+      
+      return queryResponse.matches
+      .filter((match:any) => match.metadata)
+      .map((match :any) => {
+        const metadata = match.metadata;
+        return {
+          query: metadata.text || metadata.query || "",
+          response: metadata.response || "",
+          timestamp: metadata.timestamp || new Date().toISOString(),
+        };
+      });
+
+    } catch (error) {
+      console.error("Error fetching conversation history:", error);
+      return [];
+    }
+}
+
+async function fetchRecentConversations(mobileNumber: string , limit : number): Promise<Array<{
+  query: string;
+  response: string;
+  timestamp: string;
+}>> {
+  try {
+    // Query the database for the most recent conversations
+    const recentConversations = await prisma.conversations.findMany({
+      where: {
+        mobileNumber: mobileNumber
+      },
+      orderBy: {
+        createdAt: 'desc' 
+      },
+      take: limit
+    });
+    
+    // Format the data for consistency with vector retrieval
+    return recentConversations.map(conv => ({
+      query: conv.user,
+      response: conv.llm,
+      timestamp: conv.createdAt.toISOString(),
+    })).reverse(); // Reverse to get chronological order (oldest first)
+    
+  } catch (error) {
+    console.error("Error fetching recent conversations:", error);
     return [];
   }
 }
@@ -178,83 +215,82 @@ async function fetchConversationHistory(
 async function handleCampaignVariables(index:any,spaceId:number): Promise<CampaignVariables>{
   const cacheKey = `campaign${spaceId}`;
   
-  //If already present , just return
   const cachedData = await redis.get(cacheKey);
   if (cachedData) {
     console.log("cachedData :" , cachedData)
     return JSON.parse(cachedData);
   }
 
-  // else get from vec db first
   const campaignVariables =await fetchCampaignDataFromVectorDB(index,spaceId)
 
   console.log("campaignVariables ;" , campaignVariables)
   
-  //now store in redis then return
   await redis.set(cacheKey, JSON.stringify(campaignVariables), "EX", 7200);
 
   return campaignVariables;
 }
 
-// async function fetchCampaignDataFromVectorDB(index:any , spaceId: number): Promise<CampaignVariables> {
-//   try {
-    
-//     const queryResponse = await index.namespace("variables").query({
-//       filter: {source: "variables",},
-//       topK: 1,
-//       includeMetadata: true,
-//       // Since values array is empty, we need an alternative approach:
-//       // 1. Either provide a dummy vector of the right dimension
-//       // 2. Or use Pinecone's metadata-only query if available
-//       vector: new Array(384).fill(0), // Dummy vector (adjust dimension as needed)
-//     });
-    
-//     // Check if we got any matches
-//     if (queryResponse.matches && queryResponse.matches.length > 0 && queryResponse.matches[0].metadata) {
-//         const metadata = queryResponse.matches[0].metadata;
-      
-//         // Convert the metadata to our CampaignVariables format
-//         return {
-//           campaignName: metadata.campaignName || "",
-//           campaignType: metadata.campaignType || "",
-//           overrideCompany: metadata.overrideCompany || "",
-//           personaName: metadata.personaName || "",
-//           jobRole: metadata.jobRole || "",
-//           campaignObjective: metadata.campaignObjective || "",
-//           communicationStyles: metadata.communicationStyles || "",
-//           initialMessage: metadata.initialMessage || "",
-//           followUpMessage: metadata.followUpMessage || ""
-//         };
-//     }
-    
-//     return {
-//       campaignName: "Default Campaign",
-//       campaignType: "Standard",
-//       overrideCompany: "",
-//       personaName: "AI Assistant",
-//       jobRole: "Customer Support",
-//       campaignObjective: "Assist customers",
-//       communicationStyles: "Friendly, Professional",
-//       initialMessage: "Hello! How can I help you today?",
-//       followUpMessage: "Is there anything else you'd like assistance with?"
-//     };
+async function addMessageToRedis(userKey: string, message: string): Promise<void> {
+  const timestamp = Date.now();
+  // Store as a list of timestamped messages
+  await redis.rpush(userKey, JSON.stringify({ message, timestamp }));
+  // Set expiration on the key to auto-cleanup (15 seconds should be plenty)
+  await redis.expire(userKey, 15);
+}
 
-//   } catch (error) {
-//     console.error("Error fetching campaign data from vector DB:", error);
-//     // Return default values if there's an error
-//     return {
-//       campaignName:  "Default Campaign",
-//       campaignType: "Standard",
-//       overrideCompany: "",
-//       personaName: "AI Assistant",
-//       jobRole: "Customer Support",
-//       campaignObjective: "Assist customers",
-//       communicationStyles: "Friendly, Professional",
-//       initialMessage: "Hello! How can I help you today?",
-//       followUpMessage: "Is there anything else you'd like assistance with?"
-//     };
-//   }
-// }
+async function processAggregatedMessages(mobileNumber: string, spaceId: number): Promise<string> {
+  const userKey = `${spaceId}:${mobileNumber}`;
+  const processingKey = `${userKey}:processing`;
+  
+  try {
+      // Get all messages
+      const messageItems = await redis.lrange(userKey, 0, -1);
+      
+      if (messageItems.length === 0) {
+          return " ";
+      }
+      
+      const messages = messageItems.map(item => JSON.parse(item).message);
+      const combinedQuery = messages.join(" ");
+      
+      console.log(`Processing aggregated messages for ${mobileNumber}:`, combinedQuery);
+      
+      // Process the query using your existing logic
+      const indexName = "campaign" + spaceId;
+      const index = pc.index(indexName, `https://${indexName}-${process.env.PINECONE_URL}`);
+      
+      const pastConversations = await fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index);
+      const combinedConversations = pastConversations.join("\n");
+      const relevantDocs = await similaritySearch(combinedQuery, index);
+      const campaignVariables = await handleCampaignVariables(index, spaceId);
+      const response = await generateResponse(combinedQuery, relevantDocs, combinedConversations, campaignVariables);
+      
+      // Save the conversation
+      await saveConversationToVecDb(mobileNumber, combinedQuery, response, index);
+      
+      await prisma.conversations.create({
+          data: {
+              spaceId: spaceId,
+              mobileNumber: mobileNumber,
+              user: combinedQuery, 
+              llm: response,
+          },
+      });
+      
+      
+      
+      // Clean up Redis after processing
+      await redis.del(userKey);
+      await redis.del(processingKey);
+      return response
+      
+  } catch (error) {
+      console.error(`Error processing messages for ${mobileNumber}:`, error);
+      // Clean up to prevent stuck messages
+      await redis.del(processingKey);
+      return ""
+  }
+}
 
 
 async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promise<CampaignVariables> {
@@ -351,7 +387,7 @@ async function similaritySearch(query: string, index:any) {
             //         topK: 3,
             //         includeValues: true,
             //     }),
-            //     keywordSearch(query),  // 🔥 BM25-based retrieval
+            //     keywordSearch(query),  //  BM25-based retrieval
             // ]);
             // const combinedResults = [...vectorResults.matches, ...keywordResults];
             // const rankedResults = await reRankResults(query, combinedResults);
@@ -593,66 +629,3 @@ async function generateResponse(query: string, context: string, history: string,
     return "I'm sorry, I encountered an issue while processing your request. Please try again shortly.";
   }
 }
-
-
-
-
-// summarizing the whole thread
-// interface ChatMessage {
-//   role: 'user' | 'assistant';
-//   content: string;
-// }
-
-// async function summarizeConversation(messages: ChatMessage[]): Promise<string> {
-//   try {
-//     const conversation = messages.map(msg => `${msg.role}: ${msg.content}`).join('\n');
-//     const prompt = `
-//       Summarize the following conversation in one sentence:
-
-//       ${conversation}
-
-//       Summary:
-//     `;
-
-//     // Use the chat-based API to generate the summary
-//     const result = await llm.invoke(prompt);
-//     const summary = result.content; // Extract the generated content
-
-//     return summary.trim();
-//   } catch (error) {
-//     console.error("Error summarizing conversation:", error);
-//     return messages.map(msg => msg.content).join('\n'); // If Gemini fails, return the full conversation.
-//   }
-// }
-
-// // Example usage
-// (async () => {
-//   const messages: ChatMessage[] = [
-//     { role: 'user', content: "What is the capital of France?" },
-//     { role: 'assistant', content: "The capital of France is Paris." },
-//     { role: 'user', content: "What is the population of Paris?" },
-//     { role: 'assistant', content: "The population of Paris is approximately 2.1 million." }
-//   ];
-//   const summary = await summarizeConversation(messages);
-//   console.log("Summary:", summary);
-// })();
-
-
-//old  and simple
-// async function summarizeConversation(query: string[]): Promise<string> {
-//   const summarizationModel = new HuggingFaceInference({
-//     apiKey: process.env.HUGGINGFACE_API_KEY,
-//     model: "sshleifer/distilbart-cnn-12-6", // Smaller and faster model
-//   });
-
-//   try {
-//     const summary = await summarizationModel.call({
-//       inputs: history.join("\n"), // Combine history into a single string
-//       parameters: { return_full_text: false }, // Optional parameters
-//     });
-//     return summary;
-//   } catch (error) {
-//     console.error("Error summarizing conversation:", error);
-//     return "Failed to generate a summary.";
-//   }
-// }
