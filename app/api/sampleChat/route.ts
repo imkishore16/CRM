@@ -41,7 +41,7 @@ export async function POST(req: NextRequest ) {
             content:query
         },
       });
-      
+
       const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
       const processingKey = `${userKey}:processing`;
       console.log(2)
@@ -91,7 +91,6 @@ async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId
   const processingKey = `${userKey}:processing`;
   
   try {
-      // Gets all messages
       const messageItems = await redis.lrange(userKey, 0, -1);
       
       if (messageItems.length === 0) {
@@ -103,7 +102,6 @@ async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId
       
       console.log(`Processing aggregated messages for ${mobileNumber}:`, combinedQuery);
       
-      // Process the query using your existing logic
       const indexName = "campaign" + spaceId;
       const index = pc.index(indexName, `https://${indexName}-${process.env.PINECONE_URL}`);
       
@@ -113,7 +111,6 @@ async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId
       const campaignVariables = await handleCampaignVariables(index, spaceId);
       const response = await generateResponse(llm,combinedQuery, relevantDocs, combinedConversations, campaignVariables);
       
-      // Save the conversation
       await saveConversationToVecDb(llm,mobileNumber, combinedQuery, response, index);
       
       await prisma.conversation.create({

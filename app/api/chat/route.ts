@@ -96,7 +96,7 @@ export async function saveConversationToVecDb(llm:string,mobileNumber: string, q
     await index.namespace(mobileNumber).upsert([
       {
         id: `query_resp_${Date.now()}`, 
-        values: queryEmbedding,
+        values: `${queryEmbedding}+${responseEmbedding}`,
         metadata: {
           type: 'query',
           query: query,

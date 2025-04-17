@@ -17,8 +17,8 @@ interface CampaignPageProps {
 
 interface Message {
   id: number
-  text: string
-  sender: "user" | "bot"
+  content: string
+  sender: "USER" | "BOT"
 }
 
 export default function CampaignPage({ params }: CampaignPageProps) {
@@ -47,13 +47,13 @@ export default function CampaignPage({ params }: CampaignPageProps) {
               const historyMessages = conversations.flatMap((conv: any, index: number) => [
                 {
                   id: index * 2 + 1,
-                  text: conv.user,
-                  sender: "user" as const
+                  content: conv.content,
+                  sender: conv.sender
                 },
                 {
                   id: index * 2 + 2,
-                  text: conv.llm,
-                  sender: "bot" as const
+                  content: conv.content,
+                  sender: conv.sender 
                 }
               ]);
               
@@ -63,8 +63,8 @@ export default function CampaignPage({ params }: CampaignPageProps) {
               setMessages([
                 { 
                   id: 1, 
-                  text: initialMessage ?? "Hello! I'm your AI assistant. How can I help you today?", 
-                  sender: "bot" 
+                  content: initialMessage ?? "Hello! I'm your AI assistant. How can I help you today?", 
+                  sender: "BOT" 
                 }
               ]);
             }
@@ -82,8 +82,8 @@ export default function CampaignPage({ params }: CampaignPageProps) {
           setMessages([
             { 
               id: 1, 
-              text: "Hello! I'm your AI assistant. How can I help you today?", 
-              sender: "bot" 
+              content: "Sorry there was an error , we will get it fixed soon", 
+              sender: "BOT" 
             }
           ]);
         } finally {
@@ -136,8 +136,8 @@ export default function CampaignPage({ params }: CampaignPageProps) {
 
     const userMessage: Message = {
       id: messages.length + 1,
-      text: input,
-      sender: "user",
+      content: input,
+      sender: "USER",
     }
     setMessages((prev) => [...prev, userMessage])
     setInput("")
@@ -160,8 +160,8 @@ export default function CampaignPage({ params }: CampaignPageProps) {
         const data = await response.json()
         const botMessage: Message = {
           id: messages.length + 2,
-          text: data.message,
-          sender: "bot",
+          content: data.message,
+          sender: "BOT",
         }
         setMessages((prev) => [...prev, botMessage])
         toast({
@@ -302,15 +302,15 @@ export default function CampaignPage({ params }: CampaignPageProps) {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={cn("flex", message.sender === "user" ? "justify-end" : "justify-start")}
+                  className={cn("flex", message.sender === "USER" ? "justify-end" : "justify-start")}
                 >
                   <div
                     className={cn(
                       "max-w-[80%] rounded-lg p-3",
-                      message.sender === "user" ? "bg-black text-white" : "bg-gray-100 text-gray-800",
+                      message.sender === "USER" ? "bg-black text-white" : "bg-gray-100 text-gray-800",
                     )}
                   >
-                    {message.text}
+                    {message.content}
                   </div>
                 </div>
               ))}
