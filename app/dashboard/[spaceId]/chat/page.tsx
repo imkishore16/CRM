@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, use,useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Send, User, Bot, Loader2 } from "lucide-react"
@@ -15,6 +15,7 @@ interface Message {
 }
 
 export default function ChatInterface() {
+
   const [messages, setMessages] = useState<Message[]>([
     { id: 1, text: "Hello! I'm your AI assistant. How can I help you today?", sender: "bot" },
   ])

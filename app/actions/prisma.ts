@@ -21,21 +21,21 @@ export async function fetchModelProvider(spaceId: number) {
 }
 
 
-export async function addConversation(spaceId: number, mobileNumber:string,llm:string,user:string ) {
+export async function addConversation(spaceId: number, mobileNumber:string,content:string , sender:"BOT" | "USER" ) {
     
-  await prisma.conversations.create({
+  await prisma.conversation.create({
     data: {
         spaceId: spaceId,
         mobileNumber: mobileNumber,
-        user: user, 
-        llm: llm,
+        content:content,
+        sender:sender
     },
   });
 }
 
 export async function fetchConversationHistory(spaceId: number, mobileNumber: string) {
   try {
-    const conversations = await prisma.conversations.findMany({
+    const conversations = await prisma.conversation.findMany({
       where: {
         spaceId: spaceId,
         mobileNumber: mobileNumber,
@@ -51,3 +51,25 @@ export async function fetchConversationHistory(spaceId: number, mobileNumber: st
     return null;
   }
 }
+
+export const getUniqueMobileNumbersBySpace = async (spaceId: number) => {
+  return await prisma.conversation.findMany({
+    where: { spaceId },
+    distinct: ["mobileNumber"], // distinct on mobileNumber
+    select: { mobileNumber: true },
+  });
+};
+
+
+export const getConversationsByMobileNumber = async (spaceId: number, mobileNumber: string) => {
+  return await prisma.conversation.findMany({
+    where: {
+      spaceId,
+      mobileNumber,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+

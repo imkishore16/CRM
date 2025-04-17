@@ -38,13 +38,28 @@ model SpaceCustomer {
   conversationStatus ConversationStatus 
 }
 
-model Conversations {
+model Conversation {
   id           Int      @id @default(autoincrement())
   spaceId      Int
   mobileNumber String
-  llm          String
-  user         String
+  sender  SenderType
+  content String 
   createdAt    DateTime @default(now())
+}
+
+// model Message {
+//   id Int @id @default(autoincrement())
+//   spaceId      Int
+//   conversationId Int
+//   content  String
+//   sender  SenderType
+//   timestamp  DateTime @default(now())
+//   conversation   Conversation @relation("ConversationMessages", fields: [conversationId], references: [id])
+// }
+
+enum SenderType {
+  USER
+  BOT
 }
 
 enum Role {

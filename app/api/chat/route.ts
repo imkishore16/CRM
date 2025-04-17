@@ -10,6 +10,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { chatTemplate } from "@/constants/chatTemplate";
 import { getLLM } from "@/clients/llm";
 import { CampaignVariables } from "@/types";
+import { spawn } from "child_process";
 const DEBOUNCE_SECONDS = 2;
 const REDIS_MESSAGE_PREFIX = 'whatsapp:pending:';
 
@@ -22,7 +23,6 @@ export async function POST(req: NextRequest) {
     try {
       
         const data = await parseFormEncodedBody(req); 
-        console.log("Received Twilio payload:", data);
         const mobileNumber = data.From?.replace("whatsapp:", ""); 
         const query = data.Body;
 
@@ -41,7 +41,14 @@ export async function POST(req: NextRequest) {
 
       const spaceId = spaceCustomer?.spaceId ?? 0;
 
-
+      await prisma.conversation.create({
+        data: {
+            spaceId: spaceId,
+            mobileNumber: mobileNumber,
+            sender:"USER",
+            content:query
+        },
+      });
       
       // Create a unique key for this user based on spaceId and mobileNumber
       const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
@@ -50,7 +57,6 @@ export async function POST(req: NextRequest) {
       await addMessageToRedis(userKey, query);
       const isProcessing = await redis.get(processingKey);
       if (isProcessing==null) {
-        // Set processing flag with expiration
         await redis.set(processingKey, "true", "EX", DEBOUNCE_SECONDS);
         // Schedule processing after debounce period
         setTimeout(async () => {
@@ -106,9 +112,9 @@ export async function saveConversationToVecDb(llm:string,mobileNumber: string, q
   }
 }
 
-export async function fetchEnhancedConversationHistory(query: string, mobileNumber: string, index: any): Promise<string[]> {
+export async function fetchEnhancedConversationHistory(query: string, mobileNumber: string, index: any,spaceId:number): Promise<string[]> {
   try {
-    const recentConversations = await fetchRecentConversations(mobileNumber, 3); // Last 3 exchanges
+    const recentConversations = await fetchRecentConversations(mobileNumber, 3,spaceId); // Last 3 exchanges
     const allConversations = [...recentConversations];
     
     const similarConversations = await fetchSimilarConversations(query, mobileNumber, index);
@@ -172,28 +178,42 @@ export async function fetchSimilarConversations(query:string , mobileNumber: str
     }
 }
 
-export async function fetchRecentConversations(mobileNumber: string , limit : number): Promise<Array<{
+export async function fetchRecentConversations(mobileNumber: string , limit : number,spaceId:number): Promise<Array<{
   query: string;
   response: string;
   timestamp: string;
 }>> {
   try {
-    const recentConversations = await prisma.conversations.findMany({
+    const recentMessages = await prisma.conversation.findMany({
       where: {
+        spaceId:spaceId,
         mobileNumber: mobileNumber
       },
       orderBy: {
         createdAt: 'desc' 
       },
-      take: limit
+      take: limit*2
     });
-    
-    // Format the data for consistency with vector retrieval
-    return recentConversations.map(conv => ({
-      query: conv.user,
-      response: conv.llm,
-      timestamp: conv.createdAt.toISOString(),
-    })).reverse(); // Reverse to get chronological order (oldest first)
+    const conversations: {
+      query: string;
+      response: string;
+      timestamp: string;
+    }[] = [];
+    for (let i = recentMessages.length - 1; i >= 0; i--) {
+      const userMsg = recentMessages[i];
+      const botMsg = recentMessages[i + 1];
+
+      if (userMsg?.sender === 'USER' && botMsg?.sender === 'BOT') {
+        conversations.push({
+          query: userMsg.content,
+          response: botMsg.content,
+          timestamp: userMsg.createdAt.toISOString(),
+        });
+        i++; // skip next iteration since we already used botMsg
+      }
+    }
+
+    return conversations.reverse(); // oldest first
     
   } catch (error) {
     console.error("Error fetching recent conversations:", error);
@@ -246,7 +266,7 @@ export async function processAggregatedMessages(llm:any , mobileNumber: string, 
       const indexName = "campaign" + spaceId;
       const index = pc.index(indexName, `https://${indexName}-${process.env.PINECONE_URL}`);
       
-      const pastConversations = await fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index);
+      const pastConversations = await fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index,spaceId);
       const combinedConversations = pastConversations.join("\n");
       const relevantDocs = await similaritySearch(combinedQuery, index);
       const campaignVariables = await handleCampaignVariables(index, spaceId);
@@ -255,12 +275,12 @@ export async function processAggregatedMessages(llm:any , mobileNumber: string, 
       // Save the conversation
       await saveConversationToVecDb(llm,mobileNumber, combinedQuery, response, index);
       
-      await prisma.conversations.create({
+      await prisma.conversation.create({
           data: {
               spaceId: spaceId,
               mobileNumber: mobileNumber,
-              user: combinedQuery, 
-              llm: response,
+              sender:"BOT",
+              content:response
           },
       });
       

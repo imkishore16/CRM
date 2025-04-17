@@ -33,6 +33,15 @@ export async function POST(req: NextRequest ) {
           return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
       }
       console.log(1)
+      await prisma.conversation.create({
+        data: {
+            spaceId: spaceId,
+            mobileNumber: mobileNumber,
+            sender:"USER",
+            content:query
+        },
+      });
+      
       const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
       const processingKey = `${userKey}:processing`;
       console.log(2)
@@ -98,7 +107,7 @@ async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId
       const indexName = "campaign" + spaceId;
       const index = pc.index(indexName, `https://${indexName}-${process.env.PINECONE_URL}`);
       
-      const pastConversations = await fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index);
+      const pastConversations = await fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index,spaceId);
       const combinedConversations = pastConversations.join("\n");
       const relevantDocs = await similaritySearch(combinedQuery, index);
       const campaignVariables = await handleCampaignVariables(index, spaceId);
@@ -107,14 +116,14 @@ async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId
       // Save the conversation
       await saveConversationToVecDb(llm,mobileNumber, combinedQuery, response, index);
       
-      await prisma.conversations.create({
-          data: {
-              spaceId: spaceId,
-              mobileNumber: mobileNumber,
-              user: combinedQuery, 
-              llm: response,
-          },
-      });
+      await prisma.conversation.create({
+        data: {
+            spaceId: spaceId,
+            mobileNumber: mobileNumber,
+            sender:"BOT",
+            content:response
+        },
+    });
       await redis.del(userKey);
       await redis.del(processingKey);
       return response
@@ -351,7 +360,7 @@ async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId
 // }>> {
 //   try {
 //     // Query the database for the most recent conversations
-//     const recentConversations = await prisma.conversations.findMany({
+//     const recentConversations = await prisma.conversation.findMany({
 //       where: {
 //         mobileNumber: mobileNumber
 //       },
