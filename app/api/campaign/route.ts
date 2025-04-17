@@ -35,7 +35,6 @@ export async function POST(req:NextRequest){
       // if (response.matches && response.matches.length > 0 && response.matches[0].metadata) {
       //   initialMessage = response.matches[0].metadata.value || "";
       // }
-      // console.log(initialMessage)
       
       // Send the first message to each mobile number
       for (const mobileNumber of mobileNumbers) {

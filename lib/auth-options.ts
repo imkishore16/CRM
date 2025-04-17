@@ -111,10 +111,8 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ account, profile }) {
-      console.log('SignIn triggered with:', { account, profile });
       try {
         if (account?.provider === "google" ) {
-          console.log("here indde singin ", profile)
           const user = await prisma.user.findUnique({
             where: {
               email: profile?.email!,
@@ -133,12 +131,10 @@ export const authOptions: NextAuthOptions = {
         }
         return true;
       } catch (error) {
-        console.log(" provider error ",error);
         return false;
       }
     },
     async jwt({ token, account, profile }) {
-      console.log('jwt  triggered with:', { account, profile });
       if (account && profile) {
         token.email = profile.email as string;
         token.id = account.access_token;
@@ -149,7 +145,6 @@ export const authOptions: NextAuthOptions = {
       session: Session,
       token: JWT;
     }) {
-      console.log('session triggered with:', { session, token });
       try {
         const user = await prisma.user.findUnique({
           where: { email: token.email }
@@ -158,12 +153,9 @@ export const authOptions: NextAuthOptions = {
         if (user) {
           session.user.id = user.id;
         }
-        // Pass Spotify token to the session if using Spotify
         if (token.accessToken) {
-          console.log("token.accessToken  ",token.accessToken)
           session.user.accessToken = token.accessToken;
         }
-        console.log("session",session);
       } catch (error) {
         if (error instanceof PrismaClientInitializationError) {
           throw new Error("Internal server error");

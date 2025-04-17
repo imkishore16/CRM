@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
         })
     );
 
-    console.log("Processed customers:", pineconeResults);
 
     // Return the enriched customer data with information from Pinecone
     return NextResponse.json({ customers: pineconeResults }, { status: 200 });

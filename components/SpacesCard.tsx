@@ -102,7 +102,7 @@ export default function SpacesCard({ space, handleDeleteSpace }: SpaceCardProps)
               <DialogHeader>
                 <DialogTitle className="text-gray-900">Confirm Deletion</DialogTitle>
                 <DialogDescription className="text-gray-600">
-                  Are you sure you want to delete "{space.name}"? This action cannot be undone.
+                  Are you sure you want to delete {space.name}? This action cannot be undone.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:gap-2">

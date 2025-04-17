@@ -27,13 +27,15 @@ model Space {
   name   String
   userId Int
   user   User   @relation("createdBy", fields: [userId], references: [id])
+  modelProvider String @default("gemini")
+
 }
 
 model SpaceCustomer {
   id                 Int                @id @default(autoincrement())
   spaceId            Int
   mobileNumber       String
-  conversationStatus ConversationStatus
+  conversationStatus ConversationStatus 
 }
 
 model Conversations {
@@ -62,7 +64,6 @@ enum ConversationStatus {
   ONGOING
   COMPLETED
 }
-
 
 enum Provider {
   Google

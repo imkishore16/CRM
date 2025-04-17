@@ -1,0 +1,1 @@
+type Provider = "openai" | "huggingface" | "gemini";

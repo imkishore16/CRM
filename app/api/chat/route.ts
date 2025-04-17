@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import pc from "@/clients/pinecone";
-import llm from "@/clients/llm";
 import embeddingModel from "@/clients/embeddingModel";
 import prisma from "@/lib/db";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
@@ -8,19 +7,9 @@ import { StringOutputParser } from "@langchain/core/output_parsers";
 import redis from "@/clients/redis";
 import twilioClient from "@/clients/twilioClient";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-
-export interface CampaignVariables {
-  campaignName: string;
-  campaignType: string;
-  overrideCompany: string;
-  personaName: string;
-  jobRole: string;
-  campaignObjective: string;
-  communicationStyles: string;
-  initialMessage: string;
-  followUpMessage: string;
-}
-
+import { chatTemplate } from "@/constants/chatTemplate";
+import { getLLM } from "@/clients/llm";
+import { CampaignVariables } from "@/types";
 const DEBOUNCE_SECONDS = 2;
 const REDIS_MESSAGE_PREFIX = 'whatsapp:pending:';
 
@@ -41,7 +30,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Query is required" }, { status: 400 });
         }
         if (!mobileNumber) {
-            console.log("no mobile numbner")
             return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
         }
 
@@ -52,51 +40,37 @@ export async function POST(req: NextRequest) {
         });
 
       const spaceId = spaceCustomer?.spaceId ?? 0;
+
+
+      
       // Create a unique key for this user based on spaceId and mobileNumber
       const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
       const processingKey = `${userKey}:processing`;
 
       await addMessageToRedis(userKey, query);
-
       const isProcessing = await redis.get(processingKey);
-
-      if (!isProcessing) {
+      if (isProcessing==null) {
         // Set processing flag with expiration
         await redis.set(processingKey, "true", "EX", DEBOUNCE_SECONDS);
-        
         // Schedule processing after debounce period
         setTimeout(async () => {
-            await processAggregatedMessages(mobileNumber, spaceId);
+          const space = await prisma.space.findFirst({
+            where: { id: spaceId },
+            select: { modelProvider: true },
+          });
+          const llmKey = `${spaceId}:llm`;
+          let llmProvider: string | null = await redis.get(llmKey);
+          if (!llmProvider) {
+            llmProvider = space?.modelProvider ?? "gemini";
+            await redis.set(llmKey, llmProvider);
+          }
+
+          const llm = getLLM(llmProvider);
+          await processAggregatedMessages(llm,mobileNumber, spaceId);
         }, DEBOUNCE_SECONDS * 1000);
     }
 
-        // const indexName="campaign"+spaceId;
-        // const index = pc.index(indexName , `https://${indexName}-${process.env.PINECONE_URL}`);
-        // const pastConversations = await fetchConversationHistory(query,mobileNumber,index);
-        // const combinedConversations = pastConversations.join("\n");
-        // const relevantDocs = await similaritySearch(query, index);
-        // const campaignVariables = await handleCampaignVariables(index,spaceId || 0);
-        // const response = await generateResponse(query,relevantDocs,combinedConversations ,campaignVariables);
-        
-        // await saveConversation(mobileNumber, query, response,index); // in vec Db
-        // save conversation in redis
-        // save conversation in db from redis 
-        // await prisma.conversations.create({
-        //   data: {
-        //       spaceId: spaceId,
-        //       mobileNumber: mobileNumber,
-        //       user:query, 
-        //       llm:response,
-        //   },
-        // })
-        
-        // await twilioClient.messages.create({
-        //   body: response,
-        //   from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, 
-        //   to: `whatsapp:${mobileNumber}` 
-        // });
-
-        return NextResponse.json({ message: "Message recived and replied" }, { status: 200 });
+        return NextResponse.json({ message: "response" }, { status: 200 });
 
     } catch (error) {
         console.error("Error processing request:", error);
@@ -104,15 +78,14 @@ export async function POST(req: NextRequest) {
     }
 }
 
-
-async function saveConversationToVecDb(mobileNumber: string, query: string, response: string, index: any): Promise<void> {
+export async function saveConversationToVecDb(llm:string,mobileNumber: string, query: string, response: string, index: any): Promise<void> {
   try {
     const [queryEmbedding, responseEmbedding] = await Promise.all([
       embeddingModel.embedQuery(query),
       embeddingModel.embedQuery(response)
     ]);
     
-    const summary = await summarizeConversation(query, response);
+    const summary = await summarizeConversation(llm,query, response);
     
     await index.namespace(mobileNumber).upsert([
       {
@@ -133,7 +106,7 @@ async function saveConversationToVecDb(mobileNumber: string, query: string, resp
   }
 }
 
-async function fetchEnhancedConversationHistory(query: string, mobileNumber: string, index: any): Promise<string[]> {
+export async function fetchEnhancedConversationHistory(query: string, mobileNumber: string, index: any): Promise<string[]> {
   try {
     const recentConversations = await fetchRecentConversations(mobileNumber, 3); // Last 3 exchanges
     const allConversations = [...recentConversations];
@@ -156,7 +129,7 @@ async function fetchEnhancedConversationHistory(query: string, mobileNumber: str
   }
 }
 
-async function fetchSimilarConversations(query:string , mobileNumber: string , index:any):Promise<Array<{
+export async function fetchSimilarConversations(query:string , mobileNumber: string , index:any):Promise<Array<{
   id: string;
   query: string;
   response: string;
@@ -199,13 +172,12 @@ async function fetchSimilarConversations(query:string , mobileNumber: string , i
     }
 }
 
-async function fetchRecentConversations(mobileNumber: string , limit : number): Promise<Array<{
+export async function fetchRecentConversations(mobileNumber: string , limit : number): Promise<Array<{
   query: string;
   response: string;
   timestamp: string;
 }>> {
   try {
-    // Query the database for the most recent conversations
     const recentConversations = await prisma.conversations.findMany({
       where: {
         mobileNumber: mobileNumber
@@ -229,7 +201,7 @@ async function fetchRecentConversations(mobileNumber: string , limit : number): 
   }
 }
 
-async function handleCampaignVariables(index:any,spaceId:number): Promise<CampaignVariables>{
+export async function handleCampaignVariables(index:any,spaceId:number): Promise<CampaignVariables>{
   const cacheKey = `campaign${spaceId}`;
   
   const cachedData = await redis.get(cacheKey);
@@ -245,7 +217,7 @@ async function handleCampaignVariables(index:any,spaceId:number): Promise<Campai
 }
 
 
-async function addMessageToRedis(userKey: string, message: string): Promise<void> {
+export async function addMessageToRedis(userKey: string, message: string): Promise<void> {
   const timestamp = Date.now();
   // Store as a list of timestamped messages
   await redis.rpush(userKey, JSON.stringify({ message, timestamp }));
@@ -253,16 +225,16 @@ async function addMessageToRedis(userKey: string, message: string): Promise<void
   await redis.expire(userKey, 15);
 }
 
-async function processAggregatedMessages(mobileNumber: string, spaceId: number): Promise<void> {
+export async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId: number): Promise<string> {
   const userKey = `${spaceId}:${mobileNumber}`;
   const processingKey = `${userKey}:processing`;
   
   try {
-      // Get all messages
+      // Gets all messages
       const messageItems = await redis.lrange(userKey, 0, -1);
       
       if (messageItems.length === 0) {
-          return;
+          return "";
       }
       
       const messages = messageItems.map(item => JSON.parse(item).message);
@@ -278,10 +250,10 @@ async function processAggregatedMessages(mobileNumber: string, spaceId: number):
       const combinedConversations = pastConversations.join("\n");
       const relevantDocs = await similaritySearch(combinedQuery, index);
       const campaignVariables = await handleCampaignVariables(index, spaceId);
-      const response = await generateResponse(combinedQuery, relevantDocs, combinedConversations, campaignVariables);
+      const response = await generateResponse(llm,combinedQuery, relevantDocs, combinedConversations, campaignVariables);
       
       // Save the conversation
-      await saveConversationToVecDb(mobileNumber, combinedQuery, response, index);
+      await saveConversationToVecDb(llm,mobileNumber, combinedQuery, response, index);
       
       await prisma.conversations.create({
           data: {
@@ -302,15 +274,15 @@ async function processAggregatedMessages(mobileNumber: string, spaceId: number):
       // Clean up Redis after processing
       await redis.del(userKey);
       await redis.del(processingKey);
-      
+      return response
   } catch (error) {
       console.error(`Error processing messages for ${mobileNumber}:`, error);
-      // Clean up to prevent stuck messages
       await redis.del(processingKey);
+      return "Something went wrong "
   }
 }
 
-async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promise<CampaignVariables> {
+export async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promise<CampaignVariables> {
   try {
     const dummyVector = new Array(384).fill(0);
     
@@ -390,7 +362,7 @@ async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promi
 }
 
 
-async function similaritySearch(query: string, index:any) {
+export async function similaritySearch(query: string, index:any) {
     try {
 
         const queryEmbedding  = await embeddingModel.embedQuery(query)
@@ -416,49 +388,49 @@ async function similaritySearch(query: string, index:any) {
 }
 
 
-async function reRankResults(query: string, results: any[]): Promise<any[]> {
-  try {
-    const messages = [
-      new HumanMessage(`
-        Given the user query: "${query}", re-rank the following results in order of relevance:
+// async function reRankResults(query: string, results: any[]): Promise<any[]> {
+//   try {
+//     const messages = [
+//       new HumanMessage(`
+//         Given the user query: "${query}", re-rank the following results in order of relevance:
 
-        Results:
-        ${results.map((res, i) => `${i + 1}. ${res.metadata?.text || "No text available"}`).join("\n")}
+//         Results:
+//         ${results.map((res, i) => `${i + 1}. ${res.metadata?.text || "No text available"}`).join("\n")}
 
-        Return the results in a sorted JSON array format. Respond with ONLY a valid JSON array:
-        [{"rank": 1, "text": "Most relevant result"}, {"rank": 2, "text": "Next best result"}, ...]
-      `)
-    ];
+//         Return the results in a sorted JSON array format. Respond with ONLY a valid JSON array:
+//         [{"rank": 1, "text": "Most relevant result"}, {"rank": 2, "text": "Next best result"}, ...]
+//       `)
+//     ];
 
-    const response = await llm.invoke(messages);
+//     const response = await llm.invoke(messages);
     
-    const responseText = response.content.toString();
+//     const responseText = response.content.toString();
     
-    const jsonMatch = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/);
-    if (!jsonMatch) {
-      throw new Error("Could not extract JSON from response");
-    }
+//     const jsonMatch = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+//     if (!jsonMatch) {
+//       throw new Error("Could not extract JSON from response");
+//     }
     
-    const rankedResults = JSON.parse(jsonMatch[0]);
+//     const rankedResults = JSON.parse(jsonMatch[0]);
 
-    return rankedResults.map((item: any) => ({
-      metadata: { text: item.text },
-      rank: item.rank
-    }));
-  } catch (error) {
-    console.error("Error in re-ranking:", error);
+//     return rankedResults.map((item: any) => ({
+//       metadata: { text: item.text },
+//       rank: item.rank
+//     }));
+//   } catch (error) {
+//     console.error("Error in re-ranking:", error);
     
-    // Add some logging to debug the error
-    if (error instanceof SyntaxError) {
-      console.error("JSON parsing error. Response was:", error.message);
-    }
+//     // Add some logging to debug the error
+//     if (error instanceof SyntaxError) {
+//       console.error("JSON parsing error. Response was:", error.message);
+//     }
     
-    return results; // If re-ranking fails, return original results
-  }
-}
+//     return results; // If re-ranking fails, return original results
+//   }
+// }
 
 
-async function summarizeConversation(query: string, response: string): Promise<string> {
+export async function summarizeConversation(llm:any ,query: string, response: string): Promise<string> {
   try {
     // Create a chat with system message for better control
     const messages = [
@@ -503,107 +475,12 @@ async function summarizeConversation(query: string, response: string): Promise<s
     return response.length > 120 ? response.substring(0, 117) + '...' : response;
   }
 }
-export interface CampaignVariables {
-  campaignName: string;
-  campaignType: string;
-  overrideCompany: string;
-  personaName: string;
-  jobRole: string;
-  campaignObjective: string;
-  communicationStyles: string;
-  initialMessage: string;
-  followUpMessage: string;
-}
 
-async function generateResponse(query: string, context: string, history: string,campaignVariables:CampaignVariables): Promise<string> {
+
+export async function generateResponse(llm:any ,query: string, context: string, history: string,campaignVariables:CampaignVariables): Promise<string> {
   try {
     
-    const promptTemplate = ChatPromptTemplate.fromTemplate(`
-      You are a {communicationStyles} {jobRole} representing {overrideCompany}. Your name is {personaName}. 
-      You are a {jobRole} for the {campaignName} campaign with the objective to {campaignObjective}.
-    
-      ## Core Responsibilities
-      - Act professionally as a {jobRole}
-      - Focus on selling the product based on provided product data and context
-      - Maintain a clear understanding of your role and campaign objectives
-    
-      ## Communication Strategy
-      1. Introduction Stage
-      - Greet the prospect professionally
-      - Introduce yourself and your company
-      - Establish the purpose of the conversation
-      - Maintain a respectful and engaging tone
-    
-      2. Prospect Qualification
-      - Determine if the prospect is the right contact
-      - Confirm their decision-making authority
-      - Assess their potential interest and needs
-    
-      3. Value Proposition
-      - Clearly articulate product/service benefits
-      - Highlight unique selling points (USPs)
-      - Demonstrate how your offering solves specific problems
-    
-      4. Needs Analysis
-      - Ask open-ended questions
-      - Actively listen to prospect's responses
-      - Identify pain points and challenges
-    
-      5. Solution Presentation
-      - Customize solution based on discovered needs
-      - Use storytelling and relatable examples
-      - Provide concrete evidence of value
-    
-      6. Objection Handling
-      - Anticipate and address potential concerns
-      - Use data, testimonials, and case studies
-      - Build trust through transparent communication
-    
-      7. Closing
-      - Propose clear next steps
-      - Summarize key benefits
-      - Create a sense of mutual opportunity
-    
-      ## Key Guidelines
-      - Tailor communication to prospect's industry and role
-      - Apply social proof and success stories
-      - Create urgency without being pushy
-      - Maintain professional and authentic interaction
-    
-      ## Contact Information Disclaimer
-      If asked about contact source, state: "Contact information was obtained from public records."
-    
-      ## Conversation Management
-      - Keep responses concise and engaging
-      - Avoid overwhelming the prospect with information
-      - Adapt communication style dynamically
-    
-      ## Tools Usage
-      Tools can be used with the following format:
-      [Tool Usage Instructions - Placeholder for specific tool interaction guidelines]
-    
-      ## Ethical Considerations
-      - Always be truthful
-      - Do not fabricate information
-      - Protect prospect's privacy
-      - Focus on genuine value creation
-    
-      ## Conversation Tracking
-      When conversation concludes, output: <END_OF_CALL>
-    
-      ## Dynamic Context
-      Previous Conversation: {history}
-      Campaign Details:
-      - Project: {overrideCompany}
-      - Description: {campaignObjective}
-      - Target Audience: Humans
-    
-      ## Current Interaction
-      Query: {query}
-      Objective: {campaignObjective}
-    
-      Begin interaction as {personaName}, a {jobRole} representing {overrideCompany}.
-    `);
+    const promptTemplate = ChatPromptTemplate.fromTemplate(chatTemplate.default);
 
     const chain = promptTemplate.pipe(llm).pipe(new StringOutputParser());
     

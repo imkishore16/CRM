@@ -34,7 +34,7 @@ export function Appbar({ showThemeSwitch = true }) {
 
   // Consistent styling classes
   const linkClass = "text-sm font-medium text-gray-700 hover:text-black transition-colors"
-  const btnOutlineClass = "border-black text-white hover:bg-white hover:text-black transition-colors"
+  const btnOutlineClass = "border-black bg-black text-white hover:bg-white hover:text-black transition-colors"
   const btnFilledClass = "bg-black text-white hover:bg-gray-900 transition-colors"
 
   return (

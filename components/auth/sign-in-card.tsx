@@ -145,7 +145,7 @@ export default function SigninCard({ setFormType }: SigninCardProps) {
 
         <div className="text-center text-sm">
           <p className="text-gray-600">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <button
               type="button"
               className="font-medium text-black hover:underline"

@@ -3,11 +3,11 @@
 import DashboardNav from "@/components/dashboard-nav"
 import type { ReactNode } from "react"
 import { use, useState } from "react"
-import { LayoutDashboard, BarChart, Upload, Send, Settings, Users, HelpCircle, Menu, X } from "lucide-react"
+import { LayoutDashboard, BarChart, Upload, Send, Settings, Users, HelpCircle, Menu, X ,BookOpen} from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
+import { useRouter } from "next/navigation"
 const NavItems = (spaceId: string) => [
   {
     name: "Dashboard",
@@ -58,6 +58,8 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
   const unwrappedParams = use(params)
   const { spaceId } = unwrappedParams
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const router = useRouter()
+
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 md:flex-row">
@@ -110,7 +112,12 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
                 <p className="text-xs text-gray-500">Contact support</p>
               </div>
             </div>
-            <Button variant="link" className="mt-2 h-auto p-0 text-xs text-black">
+            <Button
+              variant="link"
+              className="mt-2 h-auto p-0 text-xs text-black flex items-center"
+              onClick={() => router.push(`/dashboard/${spaceId}/documentation`)}
+            >
+              <BookOpen className="h-3 w-3 mr-1" />
               View documentation
             </Button>
           </div>

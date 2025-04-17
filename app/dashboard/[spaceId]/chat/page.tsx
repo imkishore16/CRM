@@ -7,7 +7,7 @@ import { Send, User, Bot, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
-
+import { fetchInitialMessage } from "@/app/actions/pc"
 interface Message {
   id: number
   text: string
@@ -27,12 +27,10 @@ export default function ChatInterface() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
-
-  // Function to handle sending a message
+  
   const handleSendMessage = async () => {
     if (!input.trim()) return
 
-    // Add the user's message to the chat
     const userMessage: Message = {
       id: messages.length + 1,
       text: input,
@@ -149,7 +147,7 @@ export default function ChatInterface() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !isLoading && handleSendMessage()}
                 placeholder="Type your message..."
-                className="border-gray-200 focus:border-black focus:ring-black text-white"
+                className="border-gray-200 focus:border-gray-300 focus:ring-gray-300"
                 disabled={isLoading}
               />
               <Button
@@ -167,4 +165,3 @@ export default function ChatInterface() {
     </div>
   )
 }
-

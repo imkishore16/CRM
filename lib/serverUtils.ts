@@ -4,13 +4,9 @@ import PdfParse, * as pdf from 'pdf-parse';
 import * as XLSX from 'xlsx';
 import * as mammoth from 'mammoth';
 
-
-
-
 type SupportedFileType = 'pdf' | 'xlsx' | 'docx' | 'txt';
 
 export async function readFileContent(file: File): Promise<string> {
-  console.log("readFilecontent")
  const fileExtension = file.name.split('.').pop()?.toLowerCase() as SupportedFileType;
 
  switch (fileExtension) {

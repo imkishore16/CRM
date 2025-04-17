@@ -439,7 +439,7 @@ return chunks;
 }
 
 type SupportedFileType = "pdf"  | "txt" ;
-export async function readFileContent(file: File): Promise<string> {
+async function readFileContent(file: File): Promise<string> {
     try {
         console.log("Reading file content:", file.name);
         
@@ -518,8 +518,6 @@ async function embedCustomProductData2(file: File, index: any): Promise<any> {
       // Parse the file content
       const text = await file.text();
       const productData = parseProductDataFromText(text);
-      console.log("++++++++++++++++++++++++++++++++++")
-      console.log("embedProductData2 : " , productData)
 
       // Generate an embedding for the entire document
       const overallEmbedding = await embeddingModel.embedQuery(text);

@@ -1,12 +1,15 @@
 
 "use client"
 
-import { useState, use, useRef } from "react"
+import { useState, use, useRef ,useEffect} from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, PlayCircle, MessageSquare, X, Send, ChevronRight, ChevronLeft } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { addConversation,fetchConversationHistory } from "@/app/actions/prisma"
+import { fetchInitialMessage } from "@/app/actions/pc"
+import { parse } from "path"
 
 interface CampaignPageProps {
   params: Promise<{ spaceId: string }>
@@ -24,14 +27,78 @@ export default function CampaignPage({ params }: CampaignPageProps) {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [chatExpanded, setChatExpanded] = useState(false)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
-  // Chat state
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: "Hello! I'm your AI assistant. How can I help you today?", sender: "bot" },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState<string>("")
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const loadConversationHistory = async () => {
+      if (chatExpanded && messages.length === 0) {
+        setIsLoadingHistory(true);
+        try {
+          const response = await fetchConversationHistory(parseInt(spaceId), spaceId);
+          
+          if (response !== null) {
+            const { conversations } = response;
+            if (conversations && conversations.length > 0) {
+              const historyMessages = conversations.flatMap((conv: any, index: number) => [
+                {
+                  id: index * 2 + 1,
+                  text: conv.user,
+                  sender: "user" as const
+                },
+                {
+                  id: index * 2 + 2,
+                  text: conv.llm,
+                  sender: "bot" as const
+                }
+              ]);
+              
+              setMessages(historyMessages);
+            } else {
+              const initialMessage = await fetchInitialMessage(parseInt(spaceId))
+              setMessages([
+                { 
+                  id: 1, 
+                  text: initialMessage ?? "Hello! I'm your AI assistant. How can I help you today?", 
+                  sender: "bot" 
+                }
+              ]);
+            }
+          } else {
+            throw new Error("Failed to load conversation history");
+          }
+        } catch (error) {
+          console.error("Error loading conversation history:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load conversation history",
+            variant: "destructive",
+          });
+          
+          setMessages([
+            { 
+              id: 1, 
+              text: "Hello! I'm your AI assistant. How can I help you today?", 
+              sender: "bot" 
+            }
+          ]);
+        } finally {
+          setIsLoadingHistory(false);
+          
+          // Scroll to bottom after loading history
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+          }, 100);
+        }
+      }
+    };
+    
+    loadConversationHistory();
+  }, [chatExpanded, spaceId, toast, messages.length, spaceId]);
 
   const startCampaign = async () => {
     setIsLoading(true)
@@ -67,7 +134,6 @@ export default function CampaignPage({ params }: CampaignPageProps) {
   const handleSendMessage = async () => {
     if (!input.trim()) return
 
-    // Add user message
     const userMessage: Message = {
       id: messages.length + 1,
       text: input,
@@ -88,7 +154,7 @@ export default function CampaignPage({ params }: CampaignPageProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ input:input }),
+        body: JSON.stringify({query:input})
       })
       if (response.ok) {
         const data = await response.json()
