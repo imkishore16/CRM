@@ -2,6 +2,7 @@ import { NextRequest,NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import embeddingModel from "@/clients/embeddingModel";
 import pc from "@/clients/pinecone";
+import { fetchIndex } from "@/app/actions/pc";
 
 
 export async function GET(req: NextRequest) {
@@ -17,13 +18,12 @@ export async function GET(req: NextRequest) {
         select: { mobileNumber: true },
     });
 
-    const customerIndexName = "customerdata" + spaceId;
-    const customerIndex = pc.index(customerIndexName, `https://${customerIndexName}${process.env.PINECONE_URL}`);
+    const index = await fetchIndex(parseInt(spaceId))
 
     const pineconeResults = await Promise.all( 
         customers.map(async (customer: { mobileNumber: string }) => {
           const { mobileNumber } = customer;
-          const queryResult = await customerIndex.namespace("customerdata").fetch([mobileNumber]);
+          const queryResult = await index.namespace("customerdata").fetch([mobileNumber]);
           const record = queryResult.records?.[mobileNumber];
           return {
             mobileNumber,

@@ -187,11 +187,11 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
   }
 
   return (
-    <div className="container max-w-4xl py-8 px-4">
-      <h1 className="text-2xl font-bold mb-2 text-gray-900">Campaign Data Upload</h1>
-      <p className="text-gray-600 mb-6">Configure your campaign settings and upload necessary files.</p>
+    <div className="container max-w-4xl py-10 px-4 mx-auto overflow-x-hidden">
+      <h1 className="text-2xl font-bold mb-2 text-foreground">Campaign Data Upload</h1>
+      <p className="text-muted-foreground mb-6">Configure your campaign settings and upload necessary files.</p>
 
-      <Alert className="mb-6 border-gray-200 bg-gray-50">
+      <Alert className="mb-6 border-border bg-background">
         <Info className="h-4 w-4 text-gray-700" />
         <AlertDescription className="text-gray-700">
           All fields marked with an asterisk (*) are required.
@@ -199,9 +199,9 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
       </Alert>
 
       {/* LLM Selection Card */}
-      <Card className="border-gray-200 mb-6">
+      <Card className="border-border mb-6">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-900">LLM Preference</CardTitle>
+          <CardTitle className="text-xl font-semibold text-foreground">LLM Preference</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -209,14 +209,14 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
               Select Language Model
             </Label>
             <div className="flex items-center gap-4">
-              <Select value={selectedLLM} onValueChange={handleLLMChange} disabled={isUpdatingLLM}>
+              <Select value={selectedLLM} onValueChange={handleLLMChange} >
                 <SelectTrigger
                   id="llm-selection"
-                  className="w-[200px] border-gray-200 bg-white focus:border-gray-300 focus:ring-gray-300"
+                  className="w-[200px] border-border bg-background focus:border-border/80 focus:ring-gray-300"
                 >
                   <SelectValue placeholder="Select LLM" />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-background">
                   {llmOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
@@ -224,16 +224,16 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
                   ))}
                 </SelectContent>
               </Select>
-              {isUpdatingLLM && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+              {/* {isUpdatingLLM && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/60" />} */}
             </div>
-            <p className="text-sm text-gray-500">This setting will be used for all campaigns in this space.</p>
+            <p className="text-sm text-muted-foreground">This setting will be used for all campaigns in this space.</p>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-gray-200">
+      <Card className="border-border">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-900">Campaign Information</CardTitle>
+          <CardTitle className="text-xl font-semibold text-foreground">Campaign Information</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-8">
@@ -248,7 +248,7 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
                   value={campaignName}
                   onChange={(e) => setCampaignName(e.target.value)}
                   className={cn(
-                    "border-gray-200 bg-white focus:border-gray-300 focus:ring-gray-300",
+                    "border-border bg-background focus:border-border/80 focus:ring-gray-300",
                     errors.campaignName && "border-red-500",
                   )}
                 />
@@ -263,13 +263,13 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
                 <Select value={campaignType} onValueChange={setCampaignType}>
                   <SelectTrigger
                     className={cn(
-                      "border-gray-200 bg-white focus:border-gray-300 focus:ring-gray-300",
+                      "border-border bg-background focus:border-border/80 focus:ring-gray-300",
                       errors.campaignType && "border-red-500",
                     )}
                   >
                     <SelectValue placeholder="Select campaign type" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-background">
                     {campaignTypes.map((type) => (
                       <SelectItem key={type} value={type}>
                         {type}
@@ -289,7 +289,7 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
                   id="overrideCompany"
                   value={overrideCompany}
                   onChange={(e) => setOverrideCompany(e.target.value)}
-                  className="border-gray-200 bg-white focus:border-gray-300 focus:ring-gray-300"
+                  className="border-border bg-background focus:border-border/80 focus:ring-gray-300"
                 />
               </div>
 
@@ -302,7 +302,7 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
                   id="personaName"
                   value={personaName}
                   onChange={(e) => setPersonaName(e.target.value)}
-                  className="border-gray-200 bg-white focus:border-gray-300 focus:ring-gray-300"
+                  className="border-border bg-background focus:border-border/80 focus:ring-gray-300"
                 />
               </div>
 
@@ -315,7 +315,7 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
                   id="jobRole"
                   value={jobRole}
                   onChange={(e) => setJobRole(e.target.value)}
-                  className="border-gray-200 bg-white focus:border-gray-300 focus:ring-gray-300"
+                  className="border-border bg-background focus:border-border/80 focus:ring-gray-300"
                 />
               </div>
 
@@ -332,7 +332,7 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
                   value={campaignObjective}
                   onChange={(e) => setCampaignObjective(e.target.value)}
                   className={cn(
-                    "border-gray-200 bg-white focus:border-gray-300 focus:ring-gray-300",
+                    "border-border bg-background focus:border-border/80 focus:ring-gray-300",
                     errors.campaignObjective && "border-red-500",
                   )}
                 />
@@ -345,14 +345,14 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
               <Label className={errors.communicationStyle ? "text-red-500" : "text-gray-700"}>
                 Communication Style <span className="text-red-500">*</span>
               </Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 border border-gray-200 rounded-md bg-gray-50">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 border border-border rounded-md bg-background">
                 {communicationStyles.map((style) => (
                   <div key={style.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`style-${style.id}`}
                       checked={selectedStyles.includes(style.id)}
                       onCheckedChange={(checked) => handleCommunicationStyleChange(style.id, checked === true)}
-                      className="border-gray-300 text-black focus:ring-gray-300"
+                      className="border-border/80 text-black focus:ring-gray-300"
                     />
                     <Label htmlFor={`style-${style.id}`} className="cursor-pointer text-gray-700">
                       {style.label}
@@ -409,7 +409,7 @@ export default function CampaignDataPage({ params }: CampaignFormProps) {
             <div className="pt-4 flex justify-end">
               <Button
                 type="submit"
-                className="bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors"
+                className="bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

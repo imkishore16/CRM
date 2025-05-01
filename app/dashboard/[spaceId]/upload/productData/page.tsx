@@ -112,12 +112,12 @@ export default function ProductDataPage({ params }: ProductDataProps) {
 
   return (
     <div className="container py-10 px-6 md:px-8 lg:px-10 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold mb-3 text-gray-900">Product Data Upload</h1>
-      <p className="text-gray-600 mb-8">Upload product information files for your campaign.</p>
+      <h1 className="text-2xl font-bold mb-3 text-foreground">Product Data Upload</h1>
+      <p className="text-muted-foreground mb-8">Upload product information files for your campaign.</p>
 
-      <Alert className="mb-8 border-gray-200 bg-gray-50">
+      <Alert className="mb-8 border-border bg-background">
         <AlertCircle className="h-4 w-4 text-gray-700" />
-        <AlertTitle className="text-gray-900">Important</AlertTitle>
+        <AlertTitle className="text-foreground">Important</AlertTitle>
         <AlertDescription className="text-gray-700">
           Upload product information files such as catalogs, specifications, pricing, and feature documents.
         </AlertDescription>
@@ -125,16 +125,16 @@ export default function ProductDataPage({ params }: ProductDataProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
-          <Card className="border-gray-200">
+          <Card className="border-border">
             <CardHeader className="px-6 py-5">
-              <CardTitle className="text-xl font-semibold text-gray-900">Upload Files</CardTitle>
+              <CardTitle className="text-xl font-semibold text-foreground">Upload Files</CardTitle>
             </CardHeader>
             <CardContent className="px-6 py-5">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div
                   className={cn(
                     "border-2 border-dashed rounded-lg p-10 transition-colors",
-                    isDragging ? "border-black bg-gray-50" : "border-gray-200",
+                    isDragging ? "border-black bg-background" : "border-border",
                     "cursor-pointer",
                   )}
                   onDragOver={handleDragOver}
@@ -152,19 +152,19 @@ export default function ProductDataPage({ params }: ProductDataProps) {
                   />
 
                   <div className="flex flex-col items-center justify-center py-6">
-                    <Upload className="h-14 w-14 text-gray-400 mb-5" />
-                    <h3 className="text-lg font-medium mb-2 text-gray-900">Upload Product Data Files</h3>
-                    <p className="text-sm text-gray-500 text-center mb-3">
+                    <Upload className="h-14 w-14 text-muted-foreground/60 mb-5" />
+                    <h3 className="text-lg font-medium mb-2 text-foreground">Upload Product Data Files</h3>
+                    <p className="text-sm text-muted-foreground text-center mb-3">
                       Drag and drop your files here or click to browse
                     </p>
-                    <p className="text-xs text-gray-400">Accepted file types: PDF, CSV, Excel, Images, Text</p>
+                    <p className="text-xs text-muted-foreground/60">Accepted file types: PDF, CSV, Excel, Images, Text</p>
                   </div>
                 </div>
 
                 <div className="pt-4">
                   <Button
                     type="submit"
-                    className="w-full bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors py-6"
+                    className="w-full bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors py-6"
                     disabled={isSubmitting || files.length === 0}
                   >
                     {isSubmitting ? (
@@ -183,20 +183,20 @@ export default function ProductDataPage({ params }: ProductDataProps) {
         </div>
 
         <div className="md:col-span-1">
-          <Card className="border-gray-200">
+          <Card className="border-border">
             <CardHeader className="px-6 py-5">
-              <CardTitle className="text-lg font-semibold text-gray-900">Selected Files ({files.length})</CardTitle>
+              <CardTitle className="text-lg font-semibold text-foreground">Selected Files ({files.length})</CardTitle>
             </CardHeader>
             <CardContent className="px-6 py-5">
               {files.length > 0 ? (
                 <ul className="space-y-3 max-h-[400px] overflow-y-auto">
                   {files.map((file, index) => (
-                    <li key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                    <li key={index} className="flex items-center justify-between bg-background p-3 rounded">
                       <div className="flex items-center space-x-2 truncate">
-                        <FileText className="h-5 w-5 text-gray-600 shrink-0" />
+                        <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                         <div className="truncate">
-                          <p className="text-sm font-medium truncate text-gray-900">{file.name}</p>
-                          <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
+                          <p className="text-sm font-medium truncate text-foreground">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
                         </div>
                       </div>
                       <Button
@@ -204,7 +204,7 @@ export default function ProductDataPage({ params }: ProductDataProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFile(index)}
-                        className="shrink-0 h-8 w-8 p-0 text-gray-500 hover:text-red-500 hover:bg-gray-100"
+                        className="shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-red-500 hover:bg-gray-100"
                       >
                         <X className="h-4 w-4" />
                         <span className="sr-only">Remove</span>
@@ -213,7 +213,7 @@ export default function ProductDataPage({ params }: ProductDataProps) {
                   ))}
                 </ul>
               ) : (
-                <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-md">
+                <div className="text-center py-10 text-muted-foreground bg-background rounded-md">
                   <p>No files selected</p>
                 </div>
               )}

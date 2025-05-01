@@ -4,15 +4,11 @@ import twilioClient from "@/clients/twilioClient";
 import redis from "@/clients/redis";
 import { Queue } from "bull";
 import Bull from "bull";
-import { CampaignVariables } from "../chat/route";
 
 export async function GET(req:NextRequest){
   try {
-    // const { searchParams } = new URL(req.url);
-
-    const spaceId = "9";
-  
-      // Fetch mobile numbers for the campaign
+      const { searchParams } = new URL(req.url);
+      const spaceId = searchParams.get("spaceId")??"0"
       const mobileNumbers = ["9445422734","9626044841"]
   
       // Send the first message to each mobile number

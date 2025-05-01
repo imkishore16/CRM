@@ -54,7 +54,7 @@ export default function SpacesCard({ space, handleDeleteSpace }: SpaceCardProps)
       transition={{ duration: 0.5 }}
       className="p-4"
     >
-      <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-300">
+      <Card className="overflow-hidden rounded-xl border border-border bg-background shadow-sm hover:shadow-md transition-shadow duration-300">
         <CardContent className="p-0">
           <div className="relative h-48 overflow-hidden">
             <Image
@@ -72,15 +72,15 @@ export default function SpacesCard({ space, handleDeleteSpace }: SpaceCardProps)
               <div className="rounded-full bg-gray-100 p-2">
                 <FolderOpen className="h-5 w-5 text-gray-700" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900 truncate">{space.name}</h2>
+              <h2 className="text-xl font-bold text-foreground truncate">{space.name}</h2>
             </div>
-            <p className="text-sm text-gray-600">Manage your data and configurations in this space.</p>
+            <p className="text-sm text-muted-foreground">Manage your data and configurations in this space.</p>
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-gray-50 p-4">
+        <CardFooter className="flex flex-col sm:flex-row gap-3 border-t border-gray-100 bg-background p-4">
           <Button
-            className="w-full sm:flex-1 bg-black text-white hover:bg-white hover:text-black transition-colors"
+            className="w-full sm:flex-1 bg-black text-white hover:bg-background hover:text-black transition-colors"
             onClick={() => router.push(`/dashboard/${space.id}`)}
           >
             <ArrowRight className="mr-2 h-4 w-4" />
@@ -91,17 +91,17 @@ export default function SpacesCard({ space, handleDeleteSpace }: SpaceCardProps)
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full sm:flex-1 bg-black text-white hover:bg-white hover:text-black transition-colors"
+                className="w-full sm:flex-1 bg-black text-white hover:bg-background hover:text-black transition-colors"
                 onClick={handleDeleteClick}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-white">
+            <DialogContent className="bg-background">
               <DialogHeader>
-                <DialogTitle className="text-gray-900">Confirm Deletion</DialogTitle>
-                <DialogDescription className="text-gray-600">
+                <DialogTitle className="text-foreground">Confirm Deletion</DialogTitle>
+                <DialogDescription className="text-muted-foreground">
                   Are you sure you want to delete {space.name}? This action cannot be undone.
                 </DialogDescription>
               </DialogHeader>
@@ -109,7 +109,7 @@ export default function SpacesCard({ space, handleDeleteSpace }: SpaceCardProps)
                 <Button
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
-                  className="w-full sm:w-auto border-gray-300 text-gray-700"
+                  className="w-full sm:w-auto border-border/80 text-gray-700"
                 >
                   Cancel
                 </Button>

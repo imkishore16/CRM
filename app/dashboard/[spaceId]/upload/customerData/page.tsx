@@ -113,7 +113,7 @@
 //             <div
 //               className={cn(
 //                 "border-2 border-dashed rounded-lg p-8 transition-colors",
-//                 isDragging ? "border-primary bg-primary/5" : "border-gray-200",
+//                 isDragging ? "border-primary bg-primary/5" : "border-border",
 //                 "cursor-pointer",
 //               )}
 //               onDragOver={handleDragOver}
@@ -124,12 +124,12 @@
 //               <input id="customer-files" type="file" multiple onChange={handleFileChange} className="hidden" />
 
 //               <div className="flex flex-col items-center justify-center py-4">
-//                 <Upload className="h-12 w-12 text-gray-400 mb-4" />
+//                 <Upload className="h-12 w-12 text-muted-foreground/60 mb-4" />
 //                 <h3 className="text-lg font-medium mb-1">Upload Customer Data Files</h3>
-//                 <p className="text-sm text-gray-500 text-center mb-2">
+//                 <p className="text-sm text-muted-foreground text-center mb-2">
 //                   Drag and drop your files here or click to browse
 //                 </p>
-//                 <p className="text-xs text-gray-400">Accepted file types: CSV, Excel, PDF, Text</p>
+//                 <p className="text-xs text-muted-foreground/60">Accepted file types: CSV, Excel, PDF, Text</p>
 //               </div>
 //             </div>
 
@@ -148,12 +148,12 @@
 //             {files.length > 0 ? (
 //               <ul className="space-y-3 max-h-[400px] overflow-y-auto">
 //                 {files.map((file, index) => (
-//                   <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+//                   <li key={index} className="flex items-center justify-between bg-background p-2 rounded">
 //                     <div className="flex items-center space-x-2 truncate">
 //                       <FileText className="h-5 w-5 text-blue-500 shrink-0" />
 //                       <div className="truncate">
 //                         <p className="text-sm font-medium truncate">{file.name}</p>
-//                         <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
+//                         <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
 //                       </div>
 //                     </div>
 //                     <Button
@@ -170,7 +170,7 @@
 //                 ))}
 //               </ul>
 //             ) : (
-//               <div className="text-center py-8 text-gray-500">
+//               <div className="text-center py-8 text-muted-foreground">
 //                 <p>No files selected</p>
 //               </div>
 //             )}
@@ -295,10 +295,10 @@ export default function CustomerDataPage({ params }: CustomerDataProps) {
 
   return (
     <div className="container py-10 px-6 md:px-8 lg:px-10 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold mb-3 text-gray-900">Customer Data Upload</h1>
-      <p className="text-gray-600 mb-8">Upload customer information files for your campaign.</p>
+      <h1 className="text-2xl font-bold mb-3 text-foreground">Customer Data Upload</h1>
+      <p className="text-muted-foreground mb-8">Upload customer information files for your campaign.</p>
 
-      <Alert className="mb-8 border-gray-200 bg-gray-50">
+      <Alert className="mb-8 border-border bg-background">
         <Info className="h-4 w-4 text-gray-700" />
         <AlertDescription className="text-gray-700">
           Upload files containing customer information such as contact details, preferences, and demographics.
@@ -307,16 +307,16 @@ export default function CustomerDataPage({ params }: CustomerDataProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
-          <Card className="border-gray-200">
+          <Card className="border-border">
             <CardHeader className="px-6 py-5">
-              <CardTitle className="text-xl font-semibold text-gray-900">Upload Files</CardTitle>
+              <CardTitle className="text-xl font-semibold text-foreground">Upload Files</CardTitle>
             </CardHeader>
             <CardContent className="px-6 py-5">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div
                   className={cn(
                     "border-2 border-dashed rounded-lg p-10 transition-colors",
-                    isDragging ? "border-black bg-gray-50" : "border-gray-200",
+                    isDragging ? "border-black bg-background" : "border-border",
                     "cursor-pointer",
                   )}
                   onDragOver={handleDragOver}
@@ -334,19 +334,19 @@ export default function CustomerDataPage({ params }: CustomerDataProps) {
                   />
 
                   <div className="flex flex-col items-center justify-center py-6">
-                    <Upload className="h-14 w-14 text-gray-400 mb-5" />
-                    <h3 className="text-lg font-medium mb-2 text-gray-900">Upload Customer Data Files</h3>
-                    <p className="text-sm text-gray-500 text-center mb-3">
+                    <Upload className="h-14 w-14 text-muted-foreground/60 mb-5" />
+                    <h3 className="text-lg font-medium mb-2 text-foreground">Upload Customer Data Files</h3>
+                    <p className="text-sm text-muted-foreground text-center mb-3">
                       Drag and drop your files here or click to browse
                     </p>
-                    <p className="text-xs text-gray-400">Accepted file types: CSV, Excel, PDF, Text</p>
+                    <p className="text-xs text-muted-foreground/60">Accepted file types: CSV, Excel, PDF, Text</p>
                   </div>
                 </div>
 
                 <div className="pt-4">
                   <Button
                     type="submit"
-                    className="w-full bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors py-6"
+                    className="w-full bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors py-6"
                     disabled={isSubmitting || files.length === 0}
                   >
                     {isSubmitting ? (
@@ -365,20 +365,20 @@ export default function CustomerDataPage({ params }: CustomerDataProps) {
         </div>
 
         <div className="md:col-span-1">
-          <Card className="border-gray-200">
+          <Card className="border-border">
             <CardHeader className="px-6 py-5">
-              <CardTitle className="text-lg font-semibold text-gray-900">Selected Files ({files.length})</CardTitle>
+              <CardTitle className="text-lg font-semibold text-foreground">Selected Files ({files.length})</CardTitle>
             </CardHeader>
             <CardContent className="px-6 py-5">
               {files.length > 0 ? (
                 <ul className="space-y-3 max-h-[400px] overflow-y-auto">
                   {files.map((file, index) => (
-                    <li key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                    <li key={index} className="flex items-center justify-between bg-background p-3 rounded">
                       <div className="flex items-center space-x-2 truncate">
-                        <FileText className="h-5 w-5 text-gray-600 shrink-0" />
+                        <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                         <div className="truncate">
-                          <p className="text-sm font-medium truncate text-gray-900">{file.name}</p>
-                          <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
+                          <p className="text-sm font-medium truncate text-foreground">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
                         </div>
                       </div>
                       <Button
@@ -386,7 +386,7 @@ export default function CustomerDataPage({ params }: CustomerDataProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFile(index)}
-                        className="shrink-0 h-8 w-8 p-0 text-gray-500 hover:text-red-500 hover:bg-gray-100"
+                        className="shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-red-500 hover:bg-gray-100"
                       >
                         <X className="h-4 w-4" />
                         <span className="sr-only">Remove</span>
@@ -395,7 +395,7 @@ export default function CustomerDataPage({ params }: CustomerDataProps) {
                   ))}
                 </ul>
               ) : (
-                <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-md">
+                <div className="text-center py-10 text-muted-foreground bg-background rounded-md">
                   <p>No files selected</p>
                 </div>
               )}

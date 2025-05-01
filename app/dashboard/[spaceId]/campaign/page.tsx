@@ -7,9 +7,9 @@ import { useToast } from "@/components/ui/use-toast"
 import { Loader2, PlayCircle, MessageSquare, X, Send, ChevronRight, ChevronLeft } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { addConversation,fetchConversationHistory } from "@/app/actions/prisma"
-import { fetchInitialMessage } from "@/app/actions/pc"
-import { parse } from "path"
+import { addConversation,fetchConversationHistory,fetchModelProvider } from "@/app/actions/prisma"
+import {getCustomInitialMessage ,fetchCustomerData} from "@/app/actions/pc"
+
 
 interface CampaignPageProps {
   params: Promise<{ spaceId: string }>
@@ -39,37 +39,29 @@ export default function CampaignPage({ params }: CampaignPageProps) {
       if (chatExpanded && messages.length === 0) {
         setIsLoadingHistory(true);
         try {
+          console.log("1")
           const response = await fetchConversationHistory(parseInt(spaceId), spaceId);
-          
-          if (response !== null) {
-            const { conversations } = response;
-            if (conversations && conversations.length > 0) {
-              const historyMessages = conversations.flatMap((conv: any, index: number) => [
-                {
-                  id: index * 2 + 1,
-                  content: conv.content,
-                  sender: conv.sender
-                },
-                {
-                  id: index * 2 + 2,
-                  content: conv.content,
-                  sender: conv.sender 
-                }
-              ]);
-              
-              setMessages(historyMessages);
-            } else {
-              const initialMessage = await fetchInitialMessage(parseInt(spaceId))
-              setMessages([
-                { 
-                  id: 1, 
-                  content: initialMessage ?? "Hello! I'm your AI assistant. How can I help you today?", 
-                  sender: "BOT" 
-                }
-              ]);
-            }
+          console.log("fetching conversation hsitory",response)
+          const conversations = response?.conversations || [];
+          if (conversations.length > 0) {
+            const historyMessages = conversations.map((conv: any, index: number) => ({
+              id: index + 1,
+              content: conv.content,
+              sender: conv.sender,
+            }));
+  
+            setMessages(historyMessages);
           } else {
-            throw new Error("Failed to load conversation history");
+            console.log("2")
+            const customInitalMessage = await getCustomInitialMessage(parseInt(spaceId)) || "Hello! I'm your AI assistant. How can I help you today?"
+            await addConversation(parseInt(spaceId),spaceId,customInitalMessage,"BOT")
+            setMessages([
+              {
+                id: 1,
+                content: customInitalMessage,
+                sender: "BOT",
+              },
+            ]);
           }
         } catch (error) {
           console.error("Error loading conversation history:", error);
@@ -154,23 +146,22 @@ export default function CampaignPage({ params }: CampaignPageProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({query:input})
+        body: JSON.stringify({query:input,mobileNumber:spaceId})
       })
       if (response.ok) {
         const data = await response.json()
-        const botMessage: Message = {
-          id: messages.length + 2,
-          content: data.message,
-          sender: "BOT",
+        // Only add bot message if there's actual content
+        if (data.message && data.message.length > 0) {
+          const botMessage: Message = {
+            id: messages.length + 2,
+            content: data.message,
+            sender: "BOT",
+          }
+          setMessages((prev) => [...prev, botMessage])
         }
-        setMessages((prev) => [...prev, botMessage])
-        toast({
-          title: "Campaign Started",
-          description: "Your campaign has been successfully started.",
-        })
       } else {
         const error = await response.json()
-        throw new Error(error.message || "Failed to start campaign")
+        throw new Error(error.message || "Failed to send message")
       }
     } catch (error) {
       console.error("Error in chat:", error)
@@ -195,16 +186,16 @@ export default function CampaignPage({ params }: CampaignPageProps) {
       <div className={cn("flex-1 overflow-auto transition-all duration-300", chatExpanded ? "mr-[400px]" : "mr-0")}>
         <div className="container py-8">
           <div className="max-w-3xl mx-auto">
-            <h1 className="text-3xl font-bold mb-6 text-gray-900">Campaign Management</h1>
+            <h1 className="text-3xl font-bold mb-6 text-foreground">Campaign Management</h1>
 
-            <Card className="mb-8 border-gray-200">
+            <Card className="mb-8 border-border">
               <CardContent className="pt-6">
                 <div className="text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
                     <PlayCircle className="h-8 w-8 text-black" />
                   </div>
-                  <h2 className="text-2xl font-semibold mb-2 text-gray-900">Ready to Launch Your Campaign?</h2>
-                  <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+                  <h2 className="text-2xl font-semibold mb-2 text-foreground">Ready to Launch Your Campaign?</h2>
+                  <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
                     Start your campaign to begin engaging with your audience. Make sure you have uploaded all necessary
                     data.
                   </p>
@@ -213,7 +204,7 @@ export default function CampaignPage({ params }: CampaignPageProps) {
                     size="lg"
                     onClick={startCampaign}
                     disabled={isLoading}
-                    className="px-8 bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors"
+                    className="px-8 bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors"
                   >
                     {isLoading ? (
                       <>
@@ -228,11 +219,11 @@ export default function CampaignPage({ params }: CampaignPageProps) {
               </CardContent>
             </Card>
 
-            <Card className="border-gray-200">
+            <Card className="border-border">
               <CardHeader>
-                <CardTitle className="text-lg font-medium text-gray-900">Campaign Information</CardTitle>
+                <CardTitle className="text-lg font-medium text-foreground">Campaign Information</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-gray-600">
+              <CardContent className="text-sm text-muted-foreground">
                 <p className="mb-4">
                   This will initiate a campaign for Space ID:{" "}
                   <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">{spaceId}</span>
@@ -240,19 +231,19 @@ export default function CampaignPage({ params }: CampaignPageProps) {
                 <div className="space-y-2">
                   <div className="flex items-start gap-2">
                     <div className="rounded-full bg-gray-100 p-1 mt-0.5">
-                      <ChevronRight className="h-3 w-3 text-gray-600" />
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
                     </div>
                     <p>All uploaded data will be used for this campaign</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <div className="rounded-full bg-gray-100 p-1 mt-0.5">
-                      <ChevronRight className="h-3 w-3 text-gray-600" />
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
                     </div>
                     <p>The campaign will run according to your configured settings</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <div className="rounded-full bg-gray-100 p-1 mt-0.5">
-                      <ChevronRight className="h-3 w-3 text-gray-600" />
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
                     </div>
                     <p>You can monitor progress in the analytics dashboard</p>
                   </div>
@@ -266,7 +257,7 @@ export default function CampaignPage({ params }: CampaignPageProps) {
       {/* Chat panel */}
       <div
         className={cn(
-          "fixed top-16 bottom-0 right-0 bg-white border-l border-gray-200 transition-all duration-300 flex flex-col",
+          "fixed top-16 bottom-0 right-0 bg-background border-l border-border transition-all duration-300 flex flex-col",
           chatExpanded ? "w-[400px]" : "w-[50px]",
         )}
       >
@@ -281,10 +272,10 @@ export default function CampaignPage({ params }: CampaignPageProps) {
         {chatExpanded ? (
           <>
             {/* Chat header */}
-            <div className="border-b border-gray-200 p-4 flex items-center justify-between">
+            <div className="border-b border-border p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-gray-700" />
-                <h3 className="font-medium text-gray-900">Test Chat</h3>
+                <h3 className="font-medium text-foreground">Test Chat</h3>
               </div>
               <Button
                 variant="ghost"
@@ -331,7 +322,7 @@ export default function CampaignPage({ params }: CampaignPageProps) {
             </div>
 
             {/* Chat input */}
-            <div className="border-t border-gray-200 p-4">
+            <div className="border-t border-border p-4">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -339,13 +330,13 @@ export default function CampaignPage({ params }: CampaignPageProps) {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                   placeholder="Type your message..."
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-                  disabled={isChatLoading}
+                  className="flex-1 rounded-md border border-border/80 px-3 py-2 text-sm bg-background focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+                  // disabled={isChatLoading}
                 />
                 <Button
                   onClick={handleSendMessage}
-                  disabled={isChatLoading || !input.trim()}
-                  className="bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors"
+                  disabled={!input.trim()}
+                  className="bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors"
                 >
                   <Send className="h-4 w-4" />
                   <span className="sr-only">Send</span>
@@ -355,12 +346,11 @@ export default function CampaignPage({ params }: CampaignPageProps) {
           </>
         ) : (
           <div className="h-full flex items-center justify-center">
-            <MessageSquare className="h-5 w-5 text-gray-400" />
+            <MessageSquare className="h-5 w-5 text-muted-foreground/60" />
           </div>
         )}
       </div>
     </div>
   )
 }
-
 

@@ -38,12 +38,12 @@ export default function UploadLayout({ children, params }: UploadLayoutProps) {
   ]
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col h-full">
       {/* Secondary Navigation */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b bg-background sticky top-0 z-10">
         <div className="container flex h-16 items-center px-4">
-          <h1 className="text-lg font-semibold mr-8 text-gray-900">Upload Data</h1>
-          <nav className="flex items-center space-x-4 lg:space-x-6 overflow-x-auto pb-2">
+          <h1 className="text-lg font-semibold mr-8">Upload Data</h1>
+          <nav className="flex items-center space-x-4 lg:space-x-6 overflow-x-auto no-scrollbar">
             {uploadNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -55,7 +55,9 @@ export default function UploadLayout({ children, params }: UploadLayoutProps) {
                   href={item.href}
                   className={cn(
                     "flex items-center whitespace-nowrap px-1 py-2 text-sm font-medium transition-colors",
-                    isActive ? "text-black border-b-2 border-black" : "text-gray-600 hover:text-gray-900",
+                    isActive
+                      ? "text-foreground border-b-2 border-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <item.icon className="mr-2 h-4 w-4" />
@@ -68,7 +70,9 @@ export default function UploadLayout({ children, params }: UploadLayoutProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 bg-gray-50">{children}</div>
+      <div className="flex-1 bg-muted/50 no-scrollbar overflow-y-auto">
+        {children}
+      </div>
     </div>
   )
 }

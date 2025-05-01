@@ -80,7 +80,7 @@ export default function UploadField({
       <div
         className={cn(
           "border-2 border-dashed rounded-lg p-4 transition-colors",
-          isDragging ? "border-primary bg-primary/5" : "border-gray-200",
+          isDragging ? "border-primary bg-primary/5" : "border-border",
           error ? "border-red-500" : "",
           "cursor-pointer",
         )}
@@ -99,7 +99,7 @@ export default function UploadField({
               </div>
               <div className="truncate">
                 <p className="text-sm font-medium truncate">{value.name}</p>
-                <p className="text-xs text-gray-500">{(value.size / 1024).toFixed(2)} KB</p>
+                <p className="text-xs text-muted-foreground">{(value.size / 1024).toFixed(2)} KB</p>
               </div>
             </div>
             <Button
@@ -117,14 +117,14 @@ export default function UploadField({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-4">
-            <Upload className="h-8 w-8 text-gray-400 mb-2" />
-            <p className="text-sm text-gray-500 text-center">Drag and drop your file here or click to browse</p>
-            <p className="text-xs text-gray-400 mt-1">Accepted file types: {accept.split(",").join(", ")}</p>
+            <Upload className="h-8 w-8 text-muted-foreground/60 mb-2" />
+            <p className="text-sm text-muted-foreground text-center">Drag and drop your file here or click to browse</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Accepted file types: {accept.split(",").join(", ")}</p>
           </div>
         )}
       </div>
 
-      {helperText && <p className={cn("text-xs", error ? "text-red-500" : "text-gray-500")}>{helperText}</p>}
+      {helperText && <p className={cn("text-xs", error ? "text-red-500" : "text-muted-foreground")}>{helperText}</p>}
     </div>
   )
 }

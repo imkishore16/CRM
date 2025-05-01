@@ -9,7 +9,7 @@
     "lint": "next lint",
     "prisma:studio": "npx prisma studio",
     "prisma:migrate": "prisma migrate dev",
-    "test": "jest"
+    "postinstall": "npx prisma generate"
   },
   "jest": {
     "testEnvironment": "jsdom",

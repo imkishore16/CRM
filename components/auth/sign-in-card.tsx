@@ -60,10 +60,10 @@ export default function SigninCard({ setFormType }: SigninCardProps) {
   }
 
   return (
-    <Card className="w-full border border-gray-200 bg-white shadow-sm">
+    <Card className="w-full border border-border bg-background shadow-sm">
       <CardHeader className="space-y-1 pb-6">
-        <CardTitle className="text-center text-2xl font-bold text-gray-900">Sign In</CardTitle>
-        <p className="text-center text-sm text-gray-500">Enter your credentials to access your account</p>
+        <CardTitle className="text-center text-2xl font-bold text-foreground">Sign In</CardTitle>
+        <p className="text-center text-sm text-muted-foreground">Enter your credentials to access your account</p>
       </CardHeader>
 
       {!!error && (
@@ -85,7 +85,7 @@ export default function SigninCard({ setFormType }: SigninCardProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              className="border-gray-300 focus:border-black focus:ring-black"
+              className="border-border/80 focus:border-black focus:ring-black"
               type="email"
               required
             />
@@ -96,7 +96,7 @@ export default function SigninCard({ setFormType }: SigninCardProps) {
               <Label htmlFor="password" className="text-gray-700">
                 Password
               </Label>
-              <Button variant="link" className="h-auto p-0 text-xs text-gray-600 hover:text-black" type="button">
+              <Button variant="link" className="h-auto p-0 text-xs text-muted-foreground hover:text-black" type="button">
                 Forgot password?
               </Button>
             </div>
@@ -106,7 +106,7 @@ export default function SigninCard({ setFormType }: SigninCardProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="border-gray-300 focus:border-black focus:ring-black"
+              className="border-border/80 focus:border-black focus:ring-black"
               type="password"
               required
             />
@@ -129,7 +129,7 @@ export default function SigninCard({ setFormType }: SigninCardProps) {
             <Separator className="w-full" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-2 text-gray-500">or continue with</span>
+            <span className="bg-background px-2 text-muted-foreground">or continue with</span>
           </div>
         </div>
 
@@ -137,14 +137,14 @@ export default function SigninCard({ setFormType }: SigninCardProps) {
           disabled={pending}
           onClick={handleGoogleSignin}
           variant="outline"
-          className="relative w-full border-gray-300 hover:bg-gray-50"
+          className="relative w-full border-border/80 hover:bg-background"
         >
           <FcGoogle className="mr-2 h-5 w-5" />
           Google
         </Button>
 
         <div className="text-center text-sm">
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Don&apos;t have an account?{" "}
             <button
               type="button"

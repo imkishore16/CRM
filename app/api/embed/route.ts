@@ -377,7 +377,7 @@ async function embedProductData(file: File, index: any): Promise<any> {
 
 async function embedCustomerData(file: File, index: any,spaceId : string,campaignId : string) {
     try{
-      console.log("here")
+      console.log("embedding custmer data")
         const data = await readFileContent(file);
         // Regex to match "MobileNumber: User Data"
         const regex = /(\d{10})\s*:\s*([\s\S]+?)(?=\n\d{10}\s*:|$)/g;

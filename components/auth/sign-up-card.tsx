@@ -66,10 +66,10 @@ export default function SignupCard({ setFormType }: SignupCardProps) {
   }
 
   return (
-    <Card className="w-full border border-gray-200 bg-white shadow-sm">
+    <Card className="w-full border border-border bg-background shadow-sm">
       <CardHeader className="space-y-1 pb-6">
-        <CardTitle className="text-center text-2xl font-bold text-gray-900">Create an Account</CardTitle>
-        <p className="text-center text-sm text-gray-500">Enter your details to create your account</p>
+        <CardTitle className="text-center text-2xl font-bold text-foreground">Create an Account</CardTitle>
+        <p className="text-center text-sm text-muted-foreground">Enter your details to create your account</p>
       </CardHeader>
 
       {!!error && (
@@ -91,7 +91,7 @@ export default function SignupCard({ setFormType }: SignupCardProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              className="border-gray-300 focus:border-black focus:ring-black"
+              className="border-border/80 focus:border-black focus:ring-black"
               type="email"
               required
             />
@@ -107,7 +107,7 @@ export default function SignupCard({ setFormType }: SignupCardProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="border-gray-300 focus:border-black focus:ring-black"
+              className="border-border/80 focus:border-black focus:ring-black"
               type="password"
               required
             />
@@ -123,7 +123,7 @@ export default function SignupCard({ setFormType }: SignupCardProps) {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
-              className="border-gray-300 focus:border-black focus:ring-black"
+              className="border-border/80 focus:border-black focus:ring-black"
               type="password"
               required
             />
@@ -146,7 +146,7 @@ export default function SignupCard({ setFormType }: SignupCardProps) {
             <Separator className="w-full" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-2 text-gray-500">or continue with</span>
+            <span className="bg-background px-2 text-muted-foreground">or continue with</span>
           </div>
         </div>
 
@@ -154,14 +154,14 @@ export default function SignupCard({ setFormType }: SignupCardProps) {
           disabled={pending}
           onClick={handleGoogleSignup}
           variant="outline"
-          className="relative w-full border-gray-300 hover:bg-gray-50"
+          className="relative w-full border-border/80 hover:bg-background"
         >
           <FcGoogle className="mr-2 h-5 w-5" />
           Google
         </Button>
 
         <div className="text-center text-sm">
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Already have an account?{" "}
             <button
               type="button"

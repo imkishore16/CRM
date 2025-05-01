@@ -9,7 +9,7 @@
 //   const session = await getServerSession(authOptions)
 
 //   return (
-//     <div className="flex min-h-screen flex-col bg-white">
+//     <div className="flex min-h-screen flex-col bg-background">
 //       {/* Hero Section */}
 //       <section className="relative overflow-hidden border-b border-gray-100 py-20 md:py-28 lg:py-32">
 //         <div
@@ -22,12 +22,12 @@
 //               <h1 className="text-4xl font-bold tracking-tight text-black sm:text-5xl md:text-6xl/none">
 //                 Empower Your <span className="gradient-text">Customer Sales</span> Strategy
 //               </h1>
-//               <p className="text-lg text-gray-600 max-w-[600px]">
+//               <p className="text-lg text-muted-foreground max-w-[600px]">
 //                 Let your customers choose the best products for their needs with our AI-powered sales assistant. Connect
 //                 with customers like never before.
 //               </p>
 //               <div className="flex flex-wrap gap-4">
-//                 <Button className="bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors rounded-full px-8 py-6 text-base">
+//                 <Button className="bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors rounded-full px-8 py-6 text-base">
 //                   <Link
 //                     href={{
 //                       pathname: "/auth",
@@ -47,7 +47,7 @@
 //             </div>
 //             <div className="relative h-[400px] lg:h-[500px] bg-gray-100 rounded-2xl overflow-hidden">
 //               <div className="absolute inset-0 flex items-center justify-center">
-//                 <span className="text-gray-400 text-lg">Dashboard Preview</span>
+//                 <span className="text-muted-foreground/60 text-lg">Dashboard Preview</span>
 //               </div>
 //             </div>
 //           </div>
@@ -55,15 +55,15 @@
 //       </section>
 
 //       {/* Social Proof */}
-//       <section className="bg-gray-50 py-12">
+//       <section className="bg-background py-12">
 //         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
 //           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-//             <p className="text-sm font-medium text-gray-500 w-full text-center mb-6 md:mb-0 md:w-auto">
+//             <p className="text-sm font-medium text-muted-foreground w-full text-center mb-6 md:mb-0 md:w-auto">
 //               TRUSTED BY INNOVATIVE COMPANIES
 //             </p>
 //             <div className="flex flex-wrap justify-center gap-8 md:gap-16 items-center w-full md:w-auto">
 //               {["Company 1", "Company 2", "Company 3", "Company 4"].map((company, i) => (
-//                 <div key={i} className="text-gray-400 font-semibold">
+//                 <div key={i} className="text-muted-foreground/60 font-semibold">
 //                   {company}
 //                 </div>
 //               ))}
@@ -73,38 +73,38 @@
 //       </section>
 
 //       {/* Features Section */}
-//       <section className="py-20 md:py-28 lg:py-32 bg-white">
+//       <section className="py-20 md:py-28 lg:py-32 bg-background">
 //         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
 //           <div className="text-center mb-16">
 //             <h2 className="text-3xl font-bold tracking-tight text-black sm:text-4xl mb-4">
 //               Powerful Features for Modern Sales Teams
 //             </h2>
-//             <p className="text-lg text-gray-600 max-w-[700px] mx-auto">
+//             <p className="text-lg text-muted-foreground max-w-[700px] mx-auto">
 //               Our platform combines cutting-edge AI with intuitive design to transform your customer interactions.
 //             </p>
 //           </div>
 
 //           <div className="grid gap-10 md:grid-cols-3">
-//             <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+//             <div className="bg-background p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
 //               <Users className="h-10 w-10 text-black mb-4" />
 //               <h3 className="text-xl font-bold text-black mb-3">Enhanced Customer Interaction</h3>
-//               <p className="text-gray-600">
+//               <p className="text-muted-foreground">
 //                 Give customers a deeper understanding of your products with AI-powered conversations.
 //               </p>
 //             </div>
 
-//             <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+//             <div className="bg-background p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
 //               <BarChart className="h-10 w-10 text-black mb-4" />
 //               <h3 className="text-xl font-bold text-black mb-3">Live Dashboard</h3>
-//               <p className="text-gray-600">
+//               <p className="text-muted-foreground">
 //                 Monitor customer interactions in real-time and gain valuable insights into their needs.
 //               </p>
 //             </div>
 
-//             <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+//             <div className="bg-background p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
 //               <Zap className="h-10 w-10 text-black mb-4" />
 //               <h3 className="text-xl font-bold text-black mb-3">Advanced AI Models</h3>
-//               <p className="text-gray-600">
+//               <p className="text-muted-foreground">
 //                 Leverage highly trained language models with perfect context understanding and reasoning.
 //               </p>
 //             </div>
@@ -113,7 +113,7 @@
 //       </section>
 
 //       {/* Benefits Section */}
-//       <section className="py-20 md:py-28 lg:py-32 bg-gray-50">
+//       <section className="py-20 md:py-28 lg:py-32 bg-background">
 //         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
 //           <div className="grid gap-12 lg:grid-cols-2 items-center">
 //             <div className="space-y-8">
@@ -130,11 +130,11 @@
 //                 ].map((benefit, i) => (
 //                   <div key={i} className="flex items-start gap-3">
 //                     <CheckCircle className="h-6 w-6 text-black flex-shrink-0 mt-0.5" />
-//                     <p className="text-gray-600">{benefit}</p>
+//                     <p className="text-muted-foreground">{benefit}</p>
 //                   </div>
 //                 ))}
 //               </div>
-//               <Button className="bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors rounded-full px-8 py-6 text-base">
+//               <Button className="bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors rounded-full px-8 py-6 text-base">
 //                 <Link href="#">
 //                   See Case Studies <ArrowRight className="ml-2 h-4 w-4" />
 //                 </Link>
@@ -142,7 +142,7 @@
 //             </div>
 //             <div className="relative h-[400px] bg-gray-200 rounded-2xl overflow-hidden">
 //               <div className="absolute inset-0 flex items-center justify-center">
-//                 <span className="text-gray-400 text-lg">Analytics Preview</span>
+//                 <span className="text-muted-foreground/60 text-lg">Analytics Preview</span>
 //               </div>
 //             </div>
 //           </div>
@@ -158,7 +158,7 @@
 //               Join {appBar.appTitle} today and create unforgettable customer experiences that drive growth.
 //             </p>
 //             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-//               <Button className="bg-white text-black hover:bg-gray-100 rounded-full px-8 py-6 text-base">
+//               <Button className="bg-background text-black hover:bg-gray-100 rounded-full px-8 py-6 text-base">
 //                 <Link
 //                   href={{
 //                     pathname: "/auth",
@@ -170,7 +170,7 @@
 //               </Button>
 //               <Button
 //                 variant="outline"
-//                 className="border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-base"
+//                 className="border-white text-white hover:bg-background/10 rounded-full px-8 py-6 text-base"
 //               >
 //                 Schedule Demo
 //               </Button>
@@ -180,12 +180,12 @@
 //       </section>
 
 //       {/* Footer */}
-//       <footer className="bg-white border-t border-gray-100 py-12">
+//       <footer className="bg-background border-t border-gray-100 py-12">
 //         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
 //           <div className="grid gap-8 md:grid-cols-4">
 //             <div>
 //               <h3 className="font-bold text-lg mb-4">{appBar.appTitle}</h3>
-//               <p className="text-gray-600 mb-4">Empowering sales teams with AI-powered customer engagement.</p>
+//               <p className="text-muted-foreground mb-4">Empowering sales teams with AI-powered customer engagement.</p>
 //               <div className="flex gap-4">{/* Social icons would go here */}</div>
 //             </div>
 
@@ -194,7 +194,7 @@
 //               <ul className="space-y-2">
 //                 {["Features", "Pricing", "Case Studies", "Documentation"].map((item, i) => (
 //                   <li key={i}>
-//                     <Link href="#" className="text-gray-600 hover:text-black">
+//                     <Link href="#" className="text-muted-foreground hover:text-black">
 //                       {item}
 //                     </Link>
 //                   </li>
@@ -207,7 +207,7 @@
 //               <ul className="space-y-2">
 //                 {["About", "Blog", "Careers", "Contact"].map((item, i) => (
 //                   <li key={i}>
-//                     <Link href="#" className="text-gray-600 hover:text-black">
+//                     <Link href="#" className="text-muted-foreground hover:text-black">
 //                       {item}
 //                     </Link>
 //                   </li>
@@ -220,7 +220,7 @@
 //               <ul className="space-y-2">
 //                 {["Terms", "Privacy", "Cookies", "Licenses"].map((item, i) => (
 //                   <li key={i}>
-//                     <Link href="#" className="text-gray-600 hover:text-black">
+//                     <Link href="#" className="text-muted-foreground hover:text-black">
 //                       {item}
 //                     </Link>
 //                   </li>
@@ -230,14 +230,14 @@
 //           </div>
 
 //           <div className="border-t border-gray-100 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-//             <p className="text-sm text-gray-600">
+//             <p className="text-sm text-muted-foreground">
 //               © {new Date().getFullYear()} {appBar.appTitle}. All rights reserved.
 //             </p>
 //             <div className="flex gap-6 mt-4 md:mt-0">
-//               <Link href="#" className="text-sm text-gray-600 hover:text-black">
+//               <Link href="#" className="text-sm text-muted-foreground hover:text-black">
 //                 Terms of Service
 //               </Link>
-//               <Link href="#" className="text-sm text-gray-600 hover:text-black">
+//               <Link href="#" className="text-sm text-muted-foreground hover:text-black">
 //                 Privacy Policy
 //               </Link>
 //             </div>
@@ -258,7 +258,7 @@ export default async function LandingPage() {
   const session = await getServerSession(authOptions)
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-background">
       {/* Hero Section */}
       <section className="relative overflow-hidden border-b border-gray-100 py-20 md:py-28 lg:py-32">
         <div
@@ -268,19 +268,19 @@ export default async function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
             <div className="space-y-8">
-              <div className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 text-sm">
+              <div className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1 text-sm">
                 <span className="mr-1 rounded-full bg-black px-1.5 py-0.5 text-xs text-white">New</span>
-                <span className="text-gray-600">AI-powered customer engagement</span>
+                <span className="text-muted-foreground">AI-powered customer engagement</span>
               </div>
               <h1 className="text-4xl font-bold tracking-tight text-black sm:text-5xl md:text-6xl/none">
                 Transform Your <span className="gradient-text">Customer Sales</span> Strategy
               </h1>
-              <p className="text-lg text-gray-600 max-w-[600px]">
+              <p className="text-lg text-muted-foreground max-w-[600px]">
                 Let your customers choose the best products for their needs with our AI-powered sales assistant. Connect
                 with customers like never before and boost your conversion rates.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button className="bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors rounded-full px-8 py-6 text-base">
+                <Button className="bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors rounded-full px-8 py-6 text-base">
                   <Link
                     href={{
                       pathname: "/auth",
@@ -297,7 +297,7 @@ export default async function LandingPage() {
                   <Link href="#features">Learn More</Link>
                 </Button>
               </div>
-              <div className="flex items-center space-x-4 text-sm text-gray-500">
+              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 <div className="flex -space-x-2">
                   {[1, 2, 3, 4].map((i) => (
                     <div
@@ -317,14 +317,14 @@ export default async function LandingPage() {
             <div className="relative h-[400px] lg:h-[500px] bg-gray-100 rounded-2xl overflow-hidden shadow-xl">
               <div className="absolute inset-0 bg-gradient-to-br from-gray-900/10 to-gray-900/5 z-10"></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-6 m-4 z-20">
+                <div className="w-full max-w-md bg-background/90 backdrop-blur-sm rounded-lg shadow-lg p-6 m-4 z-20">
                   <div className="flex items-center space-x-3 mb-4">
                     <div className="h-10 w-10 rounded-full bg-black flex items-center justify-center">
                       <MessageSquare className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-gray-900">AI Assistant</h3>
-                      <p className="text-xs text-gray-500">Online now</p>
+                      <h3 className="font-medium text-foreground">AI Assistant</h3>
+                      <p className="text-xs text-muted-foreground">Online now</p>
                     </div>
                   </div>
                   <div className="space-y-3 mb-4">
@@ -350,15 +350,15 @@ export default async function LandingPage() {
       </section>
 
       {/* Social Proof */}
-      <section className="bg-gray-50 py-12">
+      <section className="bg-background py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-            <p className="text-sm font-medium text-gray-500 w-full text-center mb-6 md:mb-0 md:w-auto">
+            <p className="text-sm font-medium text-muted-foreground w-full text-center mb-6 md:mb-0 md:w-auto">
               TRUSTED BY INNOVATIVE COMPANIES
             </p>
             <div className="flex flex-wrap justify-center gap-8 md:gap-16 items-center w-full md:w-auto">
               {["Company 1", "Company 2", "Company 3", "Company 4"].map((company, i) => (
-                <div key={i} className="text-gray-400 font-semibold">
+                <div key={i} className="text-muted-foreground/60 font-semibold">
                   {company}
                 </div>
               ))}
@@ -368,45 +368,45 @@ export default async function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 md:py-28 lg:py-32 bg-white">
+      <section id="features" className="py-20 md:py-28 lg:py-32 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-black sm:text-4xl mb-4">
               Powerful Features for Modern Sales Teams
             </h2>
-            <p className="text-lg text-gray-600 max-w-[700px] mx-auto">
+            <p className="text-lg text-muted-foreground max-w-[700px] mx-auto">
               Our platform combines cutting-edge AI with intuitive design to transform your customer interactions.
             </p>
           </div>
 
           <div className="grid gap-10 md:grid-cols-3">
-            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-background p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
               <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
                 <Users className="h-6 w-6 text-black" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Enhanced Customer Interaction</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold text-foreground mb-3">Enhanced Customer Interaction</h3>
+              <p className="text-muted-foreground">
                 Give customers a deeper understanding of your products with AI-powered conversations that adapt to their
                 needs.
               </p>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-background p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
               <div className="h-12 w-12 rounded-2xl bg-green-50 flex items-center justify-center mb-4">
                 <ChartBar className="h-6 w-6 text-black" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Real-time Analytics</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold text-foreground mb-3">Real-time Analytics</h3>
+              <p className="text-muted-foreground">
                 Monitor customer interactions in real-time and gain valuable insights into their needs and preferences.
               </p>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-background p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
               <div className="h-12 w-12 rounded-2xl bg-purple-50 flex items-center justify-center mb-4">
                 <Sparkles className="h-6 w-6 text-black" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Advanced AI Models</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold text-foreground mb-3">Advanced AI Models</h3>
+              <p className="text-muted-foreground">
                 Leverage highly trained language models with perfect context understanding and reasoning capabilities.
               </p>
             </div>
@@ -445,7 +445,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20 md:py-28 lg:py-32 bg-gray-50">
+      <section className="py-20 md:py-28 lg:py-32 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-2 items-center">
             <div className="space-y-8">
@@ -464,17 +464,17 @@ export default async function LandingPage() {
                     <div className="rounded-full bg-black p-1.5 flex-shrink-0 mt-0.5">
                       <CheckCircle className="h-4 w-4 text-white" />
                     </div>
-                    <p className="text-gray-600">{benefit}</p>
+                    <p className="text-muted-foreground">{benefit}</p>
                   </div>
                 ))}
               </div>
-              <Button className="bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors rounded-full px-8 py-6 text-base">
+              <Button className="bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors rounded-full px-8 py-6 text-base">
                 <Link href="#">
                   See Case Studies <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
             </div>
-            <div className="relative h-[400px] bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
+            <div className="relative h-[400px] bg-background rounded-2xl overflow-hidden shadow-lg border border-gray-100">
               <div className="absolute inset-0 flex items-center justify-center p-6">
                 <div className="space-y-6 w-full">
                   <div className="flex items-center space-x-4">
@@ -482,8 +482,8 @@ export default async function LandingPage() {
                       <Shield className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Enterprise-Grade Security</h3>
-                      <p className="text-sm text-gray-500">Your data is protected with end-to-end encryption</p>
+                      <h3 className="text-lg font-semibold text-foreground">Enterprise-Grade Security</h3>
+                      <p className="text-sm text-muted-foreground">Your data is protected with end-to-end encryption</p>
                     </div>
                   </div>
 
@@ -500,13 +500,13 @@ export default async function LandingPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="bg-background p-4 rounded-lg">
                       <p className="text-2xl font-bold text-black">87%</p>
-                      <p className="text-sm text-gray-500">Customer Retention</p>
+                      <p className="text-sm text-muted-foreground">Customer Retention</p>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="bg-background p-4 rounded-lg">
                       <p className="text-2xl font-bold text-black">24/7</p>
-                      <p className="text-sm text-gray-500">AI Availability</p>
+                      <p className="text-sm text-muted-foreground">AI Availability</p>
                     </div>
                   </div>
                 </div>
@@ -517,11 +517,11 @@ export default async function LandingPage() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-black sm:text-4xl mb-4">What Our Customers Say</h2>
-            <p className="text-lg text-gray-600 max-w-[700px] mx-auto">
+            <p className="text-lg text-muted-foreground max-w-[700px] mx-auto">
               Don't just take our word for it. Here's what our customers have to say about our platform.
             </p>
           </div>
@@ -547,7 +547,7 @@ export default async function LandingPage() {
                 role: "COO, Global Services",
               },
             ].map((testimonial, i) => (
-              <div key={i} className="bg-gray-50 p-6 rounded-xl border border-gray-100">
+              <div key={i} className="bg-background p-6 rounded-xl border border-gray-100">
                 <div className="flex items-center mb-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <svg key={star} className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
@@ -557,8 +557,8 @@ export default async function LandingPage() {
                 </div>
                 <p className="text-gray-700 mb-4">"{testimonial.quote}"</p>
                 <div>
-                  <p className="font-medium text-gray-900">{testimonial.author}</p>
-                  <p className="text-sm text-gray-500">{testimonial.role}</p>
+                  <p className="font-medium text-foreground">{testimonial.author}</p>
+                  <p className="text-sm text-muted-foreground">{testimonial.role}</p>
                 </div>
               </div>
             ))}
@@ -575,7 +575,7 @@ export default async function LandingPage() {
               Join {appBar.appTitle} today and create unforgettable customer experiences that drive growth.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="bg-white text-black hover:bg-gray-100 rounded-full px-8 py-6 text-base">
+              <Button className="bg-background text-black hover:bg-gray-100 rounded-full px-8 py-6 text-base">
                 <Link
                   href={{
                     pathname: "/auth",
@@ -587,7 +587,7 @@ export default async function LandingPage() {
               </Button>
               <Button
                 variant="outline"
-                className="border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-base"
+                className="border-white text-white hover:bg-background/10 rounded-full px-8 py-6 text-base"
               >
                 Schedule Demo
               </Button>
@@ -597,15 +597,15 @@ export default async function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-100 py-12">
+      <footer className="bg-background border-t border-gray-100 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 md:grid-cols-4">
             <div>
               <h3 className="font-bold text-lg mb-4">{appBar.appTitle}</h3>
-              <p className="text-gray-600 mb-4">Empowering sales teams with AI-powered customer engagement.</p>
+              <p className="text-muted-foreground mb-4">Empowering sales teams with AI-powered customer engagement.</p>
               <div className="flex gap-4">
                 {["twitter", "facebook", "instagram", "linkedin"].map((social) => (
-                  <a key={social} href="#" className="text-gray-400 hover:text-gray-800">
+                  <a key={social} href="#" className="text-muted-foreground/60 hover:text-gray-800">
                     <span className="sr-only">{social}</span>
                     <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
                       <span className="text-xs">{social[0].toUpperCase()}</span>
@@ -620,7 +620,7 @@ export default async function LandingPage() {
               <ul className="space-y-2">
                 {["Features", "Pricing", "Case Studies", "Documentation"].map((item, i) => (
                   <li key={i}>
-                    <Link href="#" className="text-gray-600 hover:text-black">
+                    <Link href="#" className="text-muted-foreground hover:text-black">
                       {item}
                     </Link>
                   </li>
@@ -633,7 +633,7 @@ export default async function LandingPage() {
               <ul className="space-y-2">
                 {["About", "Blog", "Careers", "Contact"].map((item, i) => (
                   <li key={i}>
-                    <Link href="#" className="text-gray-600 hover:text-black">
+                    <Link href="#" className="text-muted-foreground hover:text-black">
                       {item}
                     </Link>
                   </li>
@@ -646,7 +646,7 @@ export default async function LandingPage() {
               <ul className="space-y-2">
                 {["Terms", "Privacy", "Cookies", "Licenses"].map((item, i) => (
                   <li key={i}>
-                    <Link href="#" className="text-gray-600 hover:text-black">
+                    <Link href="#" className="text-muted-foreground hover:text-black">
                       {item}
                     </Link>
                   </li>
@@ -656,14 +656,14 @@ export default async function LandingPage() {
           </div>
 
           <div className="border-t border-gray-100 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} {appBar.appTitle}. All rights reserved.
             </p>
             <div className="flex gap-6 mt-4 md:mt-0">
-              <Link href="#" className="text-sm text-gray-600 hover:text-black">
+              <Link href="#" className="text-sm text-muted-foreground hover:text-black">
                 Terms of Service
               </Link>
-              <Link href="#" className="text-sm text-gray-600 hover:text-black">
+              <Link href="#" className="text-sm text-muted-foreground hover:text-black">
                 Privacy Policy
               </Link>
             </div>

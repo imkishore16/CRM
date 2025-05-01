@@ -6,13 +6,14 @@ import "./globals.css"
 import { Toaster } from "sonner"
 import { appBar } from "@/constants/appBar"
 import { Appbar } from "@/components/Appbar"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 type ToasterProps = React.ComponentProps<typeof Toaster>
 
 const toastOptions: ToasterProps = {
-  theme: "light", // Changed to light to match our black and white theme
+  theme: "light", 
   richColors: true,
   closeButton: true,
   pauseWhenPageIsHidden: true,
@@ -39,6 +40,31 @@ export const metadata: Metadata = {
   ],
 }
 
+// export default function RootLayout({
+//   children,
+// }: Readonly<{
+//   children: React.ReactNode
+// }>) {
+//   return (
+//     <html lang="en" suppressHydrationWarning>
+//       <body className={`${inter.className} bg-background text-black`}>
+//         <Toaster {...toastOptions} />
+//         <ThemeProvider
+//           attribute="class"
+//           defaultTheme="light" 
+//           disableTransitionOnChange
+//           enableSystem
+//         >
+//           <Providers>
+//             <Appbar />
+//             <main>{children}</main>
+//           </Providers>
+//         </ThemeProvider>
+//       </body>
+//     </html>
+//   )
+// }
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -46,21 +72,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-white text-black`}>
+      <body className={`${inter.className} bg-background text-foreground content-container`}>
         <Toaster {...toastOptions} />
         <ThemeProvider
           attribute="class"
-          defaultTheme="light" // Set default theme to light for our black and white design
-          disableTransitionOnChange
+          defaultTheme="system"
           enableSystem
+          disableTransitionOnChange
         >
           <Providers>
-            <Appbar />
-            <main>{children}</main>
+            <div className="min-h-screen flex flex-col">
+              <Appbar />
+              <main className="flex-1 content-container no-scrollbar">
+                {children}
+              </main>
+            </div>
           </Providers>
         </ThemeProvider>
       </body>
     </html>
   )
 }
-

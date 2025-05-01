@@ -4,8 +4,13 @@ import twilioClient from "@/clients/twilioClient";
 import redis from "@/clients/redis";
 import { Queue } from "bull";
 import Bull from "bull";
-import { CampaignVariables } from "../chat/route";
 import pc from "@/clients/pinecone";
+import { fetchModelProvider } from "@/app/actions/prisma";
+import { getLLM } from "@/clients/llm";
+import SpacesCard from "@/components/SpacesCard";
+import { generateResponse, handleCampaignVariables } from "@/lib/serverUtils";
+import { CampaignVariables } from "@/types";
+import { fetchCustomerData } from "@/app/actions/pc";
 
 
 // store user conversation in db and make a fetch to find if user has ghosted / or use the conversationEnded variable to send followup message
@@ -30,15 +35,19 @@ export async function POST(req:NextRequest){
         vector: new Array(384).fill(0)
       });
       
-      let initialMessage = "Hi"
-      // let initialMessage : any
-      // if (response.matches && response.matches.length > 0 && response.matches[0].metadata) {
-      //   initialMessage = response.matches[0].metadata.value || "";
-      // }
+      // let initialMessage = "Hi"
+      let initialMessage : any
+      if (response.matches && response.matches.length > 0 && response.matches[0].metadata) {
+        initialMessage = response.matches[0].metadata.value || "";
+      }
       
-      // Send the first message to each mobile number
+      const modelProvider = await fetchModelProvider(parseInt(spaceId))
+      const model = getLLM(modelProvider ?? "gemini")
+      const campaignVariables = await handleCampaignVariables(index,parseInt(spaceId))
+      
       for (const mobileNumber of mobileNumbers) {
-        await sendFirstMessage(mobileNumber,parseInt(spaceId),initialMessage);
+        const customInitialMessage = await customFirstMessage(index,model,mobileNumber,campaignVariables);
+        await sendFirstMessage(mobileNumber,customInitialMessage)
       }
   
       return NextResponse.json({ success: true });
@@ -49,10 +58,16 @@ export async function POST(req:NextRequest){
 }
 
 
-async function sendFirstMessage(mobileNumber: string, spaceId:number , initialMessage : string): Promise<void> {
+export async function customFirstMessage(index:any,model:any ,mobileNumber: string,campaignVariables:CampaignVariables): Promise<string> {
+  const customerData = await fetchCustomerData(index,mobileNumber)
+  const llmResponse = await generateResponse(model,"",customerData,"",campaignVariables)
+  return llmResponse
+}
+
+async function sendFirstMessage(mobileNumber: string, customInitialMessage : string): Promise<void> {
     try {
       await twilioClient.messages.create({
-        body: initialMessage,
+          body: customInitialMessage,
           from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
           to: `whatsapp:${"+91"}${mobileNumber}` 
 
@@ -61,7 +76,7 @@ async function sendFirstMessage(mobileNumber: string, spaceId:number , initialMe
     } catch (error) {
       console.error(`Failed to send message to ${mobileNumber}:`, error);
     }
-  }
+}
 
 async function fetchMobileNumbers(spaceId: number): Promise<string[]> {
     const customers = await prisma.spaceCustomer.findMany({

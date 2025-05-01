@@ -42,26 +42,26 @@ export default function OverviewPage({ params }: OverviewPageProps) {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-2 text-gray-900">Campaign Overview</h1>
-        <p className="text-gray-600 mb-8">Configure your campaign settings by selecting an option below.</p>
+        <h1 className="text-2xl font-bold mb-2 text-foreground">Campaign Overview</h1>
+        <p className="text-muted-foreground mb-8">Configure your campaign settings by selecting an option below.</p>
 
         <div className="grid gap-4">
           {navigationItems.map((item) => (
             <Card
               key={item.id}
-              className="border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
+              className="border-border hover:border-border/80 hover:shadow-sm transition-all cursor-pointer"
               onClick={() => (window.location.href = item.href)}
             >
               <CardContent className="p-0">
                 <div className="flex items-center p-4">
                   <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                    <item.icon className="h-6 w-6 text-gray-600" />
+                    <item.icon className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-medium text-gray-900">{item.title}</h3>
-                    <p className="text-sm text-gray-600">{item.description}</p>
+                    <h3 className="text-lg font-medium text-foreground">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/60" />
                 </div>
               </CardContent>
             </Card>

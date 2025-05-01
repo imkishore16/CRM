@@ -15,13 +15,13 @@ export default function DocumentationPage() {
           <BookOpen className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Campaign Documentation</h1>
-          <p className="text-gray-600">Learn how to create effective campaigns and maximize your results</p>
+          <h1 className="text-2xl font-bold text-foreground">Campaign Documentation</h1>
+          <p className="text-muted-foreground">Learn how to create effective campaigns and maximize your results</p>
         </div>
       </div>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="bg-white border border-gray-200 rounded-lg p-1">
+        <div className="bg-background border border-border rounded-lg p-1">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="overview" className="data-[state=active]:bg-gray-100">
               <FileText className="h-4 w-4 mr-2" />
@@ -39,9 +39,9 @@ export default function DocumentationPage() {
         </div>
 
         <TabsContent value="overview" className="space-y-6">
-          <Card className="border-gray-200">
-            <CardHeader className="bg-gray-50 border-b border-gray-200">
-              <CardTitle className="text-xl font-semibold text-gray-900">
+          <Card className="border-border">
+            <CardHeader className="bg-background border-b border-border">
+              <CardTitle className="text-xl font-semibold text-foreground">
                 Overview of Campaign Creation Fields
               </CardTitle>
             </CardHeader>
@@ -71,8 +71,8 @@ export default function DocumentationPage() {
                   "Initial Message",
                   "Followup Message",
                 ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-md">
-                    <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                  <div key={index} className="flex items-center gap-2 p-3 bg-background rounded-md">
+                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <span className="text-gray-800 font-medium">{item}</span>
                   </div>
                 ))}
@@ -82,9 +82,9 @@ export default function DocumentationPage() {
         </TabsContent>
 
         <TabsContent value="instructions" className="space-y-6">
-          <Card className="border-gray-200">
-            <CardHeader className="bg-gray-50 border-b border-gray-200">
-              <CardTitle className="text-xl font-semibold text-gray-900">
+          <Card className="border-border">
+            <CardHeader className="bg-background border-b border-border">
+              <CardTitle className="text-xl font-semibold text-foreground">
                 Writing Effective Instructions for Each Variable
               </CardTitle>
             </CardHeader>
@@ -98,13 +98,13 @@ export default function DocumentationPage() {
 
                 <div className="space-y-8">
                   {/* Campaign Name */}
-                  <div className="border-b border-gray-200 pb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">1. Campaign Name</h3>
+                  <div className="border-b border-border pb-6">
+                    <h3 className="text-lg font-semibold text-foreground mb-3">1. Campaign Name</h3>
                     <p className="text-gray-700 mb-3">
                       The Campaign Name field doesn't directly affect the Chat. However, it should be descriptive enough
                       to easily identify the campaign's purpose or target audience for internal use.
                     </p>
-                    <div className="bg-gray-50 p-4 rounded-md">
+                    <div className="bg-background p-4 rounded-md">
                       <h4 className="font-medium text-gray-800 mb-2">Tips:</h4>
                       <ul className="list-disc list-inside space-y-1 text-gray-700">
                         <li>Use numbered and lettered headings to organize the campaign structure or funnel.</li>
@@ -123,12 +123,12 @@ export default function DocumentationPage() {
                   </div>
 
                   {/* Campaign Type */}
-                  <div className="border-b border-gray-200 pb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">2. Campaign Type</h3>
+                  <div className="border-b border-border pb-6">
+                    <h3 className="text-lg font-semibold text-foreground mb-3">2. Campaign Type</h3>
                     <p className="text-gray-700 mb-3">
                       The Campaign Type determines the approach and tone. Choose between Sales, Survey, or Support.
                     </p>
-                    <div className="bg-gray-50 p-4 rounded-md">
+                    <div className="bg-background p-4 rounded-md">
                       <ul className="list-disc list-inside space-y-2 text-gray-700">
                         <li>
                           <span className="font-medium">"Survey":</span> For user interviews, lead qualifications,
@@ -147,15 +147,15 @@ export default function DocumentationPage() {
                   </div>
 
                   {/* Override Company */}
-                  <div className="border-b border-gray-200 pb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">3. Override Company</h3>
+                  <div className="border-b border-border pb-6">
+                    <h3 className="text-lg font-semibold text-foreground mb-3">3. Override Company</h3>
                     <p className="text-gray-700 mb-3">
                       This feature is used when you need to run campaigns for a specific sub-product within your larger
                       organization. By default, your company name is passed to the model during chat. When you override
                       the name and description, the model will treat that information while chatting, only for the
                       particular campaign.
                     </p>
-                    <div className="bg-gray-50 p-4 rounded-md mb-4">
+                    <div className="bg-background p-4 rounded-md mb-4">
                       <h4 className="font-medium text-gray-800 mb-2">
                         Company Name: The exact name of the creator or sub-brand.
                       </h4>
@@ -173,7 +173,7 @@ export default function DocumentationPage() {
                         <li>"Here from HDFC ERGO"</li>
                       </ul>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-md">
+                    <div className="bg-background p-4 rounded-md">
                       <h4 className="font-medium text-gray-800 mb-2">
                         About Company: A brief, compelling description of the company or product.
                       </h4>
@@ -197,7 +197,7 @@ export default function DocumentationPage() {
 
                   {/* More sections would continue here */}
                   <div className="text-center py-4">
-                    <p className="text-gray-500">
+                    <p className="text-muted-foreground">
                       Scroll through the tabs to see more detailed instructions for each campaign variable.
                     </p>
                   </div>
@@ -208,9 +208,9 @@ export default function DocumentationPage() {
         </TabsContent>
 
         <TabsContent value="tips" className="space-y-6">
-          <Card className="border-gray-200">
-            <CardHeader className="bg-gray-50 border-b border-gray-200">
-              <CardTitle className="text-xl font-semibold text-gray-900">Key Tips for Writing Flows</CardTitle>
+          <Card className="border-border">
+            <CardHeader className="bg-background border-b border-border">
+              <CardTitle className="text-xl font-semibold text-foreground">Key Tips for Writing Flows</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-6">
@@ -219,7 +219,7 @@ export default function DocumentationPage() {
                     <Info className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Use Second Person POV</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Use Second Person POV</h3>
                     <p className="text-gray-700">
                       Instruct the AI addressing as "you" and "your," as if speaking directly to it. Be clear but
                       conversational, using phrases you'd naturally use with your end users.
@@ -232,7 +232,7 @@ export default function DocumentationPage() {
                     <Info className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Capitalize Action Words</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Capitalize Action Words</h3>
                     <p className="text-gray-700">
                       Emphasize key actions by capitalizing words like ASK, THANK, or SHARE. This helps the AI
                       prioritize important steps.
@@ -245,7 +245,7 @@ export default function DocumentationPage() {
                     <Info className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
                       Use Quotation Marks for Specific Phrases
                     </h3>
                     <p className="text-gray-700">
@@ -264,7 +264,7 @@ export default function DocumentationPage() {
                     <Info className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Keep Instructions Concise</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Keep Instructions Concise</h3>
                     <p className="text-gray-700">
                       Avoid covering all edge cases in the Flow. With an 8-step limit, focus on precision. The shorter
                       and clearer the instruction, the better it performs.
@@ -277,7 +277,7 @@ export default function DocumentationPage() {
                     <Info className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Utilize the Second Brain Manager</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Utilize the Second Brain Manager</h3>
                     <p className="text-gray-700">
                       Address more edge cases by utilizing the Second Brain Manager and adding relevant, high-quality
                       memories to the model.
@@ -290,7 +290,7 @@ export default function DocumentationPage() {
                     <Info className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Test and Iterate</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Test and Iterate</h3>
                     <p className="text-gray-700">
                       Testing is essential! Iterate on the prompt wording to ensure the AI effectively engages users and
                       achieves the desired outcomes.

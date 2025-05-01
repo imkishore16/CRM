@@ -107,10 +107,10 @@ export default function HomeView() {
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="rounded-full bg-gray-100 p-4 mb-4">
-            <FolderPlus className="h-8 w-8 text-gray-400" />
+            <FolderPlus className="h-8 w-8 text-muted-foreground/60" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No spaces found</h3>
-          <p className="text-gray-500 max-w-md mb-6">
+          <h3 className="text-lg font-medium text-foreground mb-2">No spaces found</h3>
+          <p className="text-muted-foreground max-w-md mb-6">
             Create your first space to start organizing your data and configurations.
           </p>
           <Button onClick={() => setIsCreateSpaceOpen(true)} className="bg-black text-white hover:bg-gray-800">
@@ -131,12 +131,12 @@ export default function HomeView() {
   }, [loading, spaces, handleDeleteSpace])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12">
         <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Spaces</h1>
-            <p className="text-gray-600">Manage your data and configurations in organized spaces.</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Spaces</h1>
+            <p className="text-muted-foreground">Manage your data and configurations in organized spaces.</p>
           </div>
           <Button
             onClick={() => setIsCreateSpaceOpen(true)}
@@ -151,9 +151,9 @@ export default function HomeView() {
       </div>
 
       <Dialog open={isCreateSpaceOpen} onOpenChange={setIsCreateSpaceOpen}>
-        <DialogContent className="bg-white">
+        <DialogContent className="bg-background">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900">Create New Space</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-foreground">Create New Space</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-4">
@@ -166,7 +166,7 @@ export default function HomeView() {
                   placeholder="Enter space name"
                   value={spaceName}
                   onChange={(e) => setSpaceName(e.target.value)}
-                  className="border-gray-300 bg-white focus:border-black"
+                  className="border-border/80 bg-background focus:border-black"
                 />
               </div>
             </div>
@@ -178,7 +178,7 @@ export default function HomeView() {
                 setIsCreateSpaceOpen(false)
                 setSpaceName("")
               }}
-              className="w-full sm:w-auto border-gray-300 text-white"
+              className="w-full sm:w-auto border-border/80 text-white"
             >
               Cancel
             </Button>

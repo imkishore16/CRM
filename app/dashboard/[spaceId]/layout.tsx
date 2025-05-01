@@ -8,6 +8,16 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ChevronDown } from "lucide-react"
+
 const NavItems = (spaceId: string) => [
   {
     name: "Dashboard",
@@ -62,17 +72,17 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
 
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 md:flex-row">
+    <div className="flex min-h-screen flex-col bg-background md:flex-row">
       {/* Mobile header */}
-      <div className="border-b border-gray-200 bg-white p-4 md:hidden">
+      <div className="border-b border-border bg-background p-4 md:hidden">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-gray-900">
+          <Link href="/" className="text-xl font-bold text-foreground">
             Dashboard
           </Link>
           <Button
             variant="outline"
             size="sm"
-            className="border-gray-200"
+            className="border-border"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             <span className="sr-only">Toggle menu</span>
@@ -83,7 +93,7 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="border-b border-gray-200 bg-white md:hidden">
+        <div className="border-b border-border bg-background md:hidden">
           <div className="py-2">
             <DashboardNav navItems={NavItems(spaceId)} />
           </div>
@@ -91,9 +101,9 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
       )}
 
       {/* Sidebar */}
-      <div className="hidden w-64 flex-shrink-0 border-r border-gray-200 bg-white md:block">
-        <div className="flex h-16 items-center border-b border-gray-200 px-6">
-          <Link href="/" className="text-xl font-bold text-gray-900">
+      <div className="hidden w-64 flex-shrink-0 border-r border-border bg-background md:block">
+        <div className="flex h-16 items-center border-b border-border px-6">
+          <Link href="/" className="text-xl font-bold text-foreground">
             Dashboard
           </Link>
         </div>
@@ -102,19 +112,19 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
         </div>
 
         <div className="mt-auto p-4">
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <div className="rounded-lg border border-border bg-muted p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-black p-2">
-                <HelpCircle className="h-4 w-4 text-white" />
+              <div className="rounded-full bg-foreground p-2">
+                <HelpCircle className="h-4 w-4 text-background" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-900">Need help?</h4>
-                <p className="text-xs text-gray-500">Contact support</p>
+                <h4 className="text-sm font-medium text-foreground">Need help?</h4>
+                <p className="text-xs text-muted-foreground">Contact support</p>
               </div>
             </div>
             <Button
               variant="link"
-              className="mt-2 h-auto p-0 text-xs text-black flex items-center"
+              className="mt-2 h-auto p-0 text-xs text-foreground flex items-center hover:text-foreground/80"
               onClick={() => router.push(`/dashboard/${spaceId}/documentation`)}
             >
               <BookOpen className="h-3 w-3 mr-1" />
@@ -127,14 +137,15 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
       {/* Main content */}
       <div
         className={cn(
-          "flex-1 overflow-auto",
+          "flex-1 overflow-hidden",
           mobileMenuOpen ? "h-[calc(100vh-8rem)]" : "h-[calc(100vh-4rem)]",
-          "md:h-screen",
+          "md:h-screen no-scrollbar"
         )}
       >
-        {children}
+        <div className="h-full overflow-auto no-scrollbar">
+          {children}
+        </div>
       </div>
     </div>
   )
 }
-

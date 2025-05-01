@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { useId } from "react";
 
 interface FormRow {
   id: string
@@ -28,7 +29,7 @@ export default function SetTargetCustomersForm() {
   const params = useParams()
   const spaceId = params.spaceId
   const { toast } = useToast()
-  const [rows, setRows] = useState<FormRow[]>([{ id: crypto.randomUUID(), mobile: "", text: "" }])
+  const [rows, setRows] = useState<FormRow[]>([{ id: useId(), mobile: "", text: "" }])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customers, setCustomers] = useState<CustomerData[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -37,7 +38,7 @@ export default function SetTargetCustomersForm() {
     const fetchCustomers = async () => {
       setIsLoading(true)
       try {
-        const res = await fetch(`${process.env.NEXTAUTH_URL}/api/customers?spaceId=${spaceId}`, {
+        const res = await fetch(`/api/customers?spaceId=${spaceId}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         })
@@ -68,7 +69,7 @@ export default function SetTargetCustomersForm() {
   }, [spaceId, toast])
 
   const addNewRow = () => {
-    setRows([...rows, { id: crypto.randomUUID(), mobile: "", text: "" }])
+    setRows([...rows, { id: useId(), mobile: "", text: "" }])
   }
 
   const updateRow = (id: string, field: keyof Omit<FormRow, "id">, value: string) => {
@@ -153,25 +154,25 @@ export default function SetTargetCustomersForm() {
 
   return (
     <div className="container max-w-4xl py-8 px-4">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">Set Target Customers</h1>
+      <h1 className="text-2xl font-bold mb-6 text-foreground">Set Target Customers</h1>
 
-      <Card className="mb-8 border-gray-200">
+      <Card className="mb-8 border-border">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-900">Add Customer Information</CardTitle>
+          <CardTitle className="text-xl font-semibold text-foreground">Add Customer Information</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {rows.map((row, index) => (
-              <div key={row.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <div key={row.id} className="bg-muted p-4 rounded-lg border border-border">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-medium text-gray-900">Customer {index + 1}</h3>
+                  <h3 className="font-medium text-foreground">Customer {index + 1}</h3>
                   {rows.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => removeRow(row.id)}
-                      className="h-8 w-8 p-0 text-gray-500 hover:text-red-500"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
                     >
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Remove</span>
@@ -181,7 +182,7 @@ export default function SetTargetCustomersForm() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor={`mobile-${row.id}`} className="text-gray-700">
+                    <Label htmlFor={`mobile-${row.id}`} className="text-foreground">
                       Mobile Number
                     </Label>
                     <Input
@@ -190,11 +191,11 @@ export default function SetTargetCustomersForm() {
                       placeholder="Enter mobile number"
                       value={row.mobile}
                       onChange={(e) => updateRow(row.id, "mobile", e.target.value)}
-                      className="border-gray-500 white bg-white"
+                      className="border-input white bg-background"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={`text-${row.id}`} className="text-gray-700">
+                    <Label htmlFor={`text-${row.id}`} className="text-foreground">
                       Customer Information
                     </Label>
                     <Textarea
@@ -202,7 +203,7 @@ export default function SetTargetCustomersForm() {
                       placeholder="Enter customer details"
                       value={row.text}
                       onChange={(e) => updateRow(row.id, "text", e.target.value)}
-                      className="min-h-[100px] border-gray-500  bg-white"
+                      className="min-h-[100px] border-input  bg-background"
                     />
                   </div>
                 </div>
@@ -214,7 +215,7 @@ export default function SetTargetCustomersForm() {
                 type="button"
                 variant="outline"
                 onClick={addNewRow}
-                className="flex items-center gap-2 border-gray-200 text-white hover:bg-gray-50 hover:text-gray-900"
+                className="border-border text-foreground hover:bg-muted"
               >
                 <PlusCircle className="h-4 w-4" />
                 Add Customer
@@ -223,7 +224,7 @@ export default function SetTargetCustomersForm() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-black text-white hover:bg-white hover:text-black hover:border-black border border-transparent transition-colors"
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
                 {isSubmitting ? (
                   <>
@@ -240,28 +241,28 @@ export default function SetTargetCustomersForm() {
       </Card>
 
       {/* Customer Data Table */}
-      <Card className="border-gray-200">
+      <Card className="border-border">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-900">Customer Data</CardTitle>
+          <CardTitle className="text-xl font-semibold text-foreground">Customer Data</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center items-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/60" />
             </div>
           ) : customers.length > 0 ? (
-            <div className="rounded-md border border-gray-200 overflow-hidden">
+            <div className="rounded-md border border-border overflow-hidden">
               <Table>
-                <TableHeader className="bg-gray-50">
+                <TableHeader className="bg-background">
                   <TableRow>
-                    <TableHead className="font-medium text-gray-700">ID</TableHead>
-                    <TableHead className="font-medium text-gray-700">Mobile Number</TableHead>
-                    <TableHead className="font-medium text-gray-700">Information</TableHead>
+                    <TableHead className="font-medium text-foreground">ID</TableHead>
+                    <TableHead className="font-medium text-foreground">Mobile Number</TableHead>
+                    <TableHead className="font-medium text-foreground">Information</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {customers.map((customer, index) => (
-                    <TableRow key={index} className="hover:bg-gray-50">
+                    <TableRow key={index} className="hover:bg-muted">
                       <TableCell className="font-medium">{index + 1}</TableCell>
                       <TableCell>{customer.mobileNumber}</TableCell>
                       <TableCell className="max-w-md truncate">{customer.information}</TableCell>
@@ -271,8 +272,8 @@ export default function SetTargetCustomersForm() {
               </Table>
             </div>
           ) : (
-            <div className="text-center py-8 bg-gray-50 rounded-md">
-              <p className="text-gray-500">No customer data available</p>
+            <div className="text-center py-8 bg-background rounded-md">
+              <p className="text-muted-foreground">No customer data available</p>
             </div>
           )}
         </CardContent>

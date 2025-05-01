@@ -30,11 +30,11 @@ export default function DashboardNav({ navItems }: DashboardNavProps) {
             className={cn(
               "flex items-center px-3 py-2 text-sm font-medium rounded-md",
               isActive 
-                ? "bg-gray-100 text-gray-900" 
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                ? "bg-gray-100 text-foreground" 
+                : "text-muted-foreground hover:bg-background hover:text-foreground"
             )}
           >
-            <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-gray-900" : "text-gray-400")} />
+            <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-foreground" : "text-muted-foreground/60")} />
             {item.name}
           </Link>
         )

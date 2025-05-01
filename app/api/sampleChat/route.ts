@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import pc from "@/clients/pinecone";
-import embeddingModel from "@/clients/embeddingModel";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { StringOutputParser } from "@langchain/core/output_parsers";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import redis from "@/clients/redis";
-import twilio from 'twilio';
-import twilioClient from "@/clients/twilioClient";
 import prisma from "@/lib/db";
-import { addMessageToRedis,saveConversationToVecDb,generateResponse,handleCampaignVariables,similaritySearch,fetchEnhancedConversationHistory} from "../chat/route";
-import { CampaignVariables } from "@/types";
+import { addMessageToRedis,saveConversationToVecDb,generateResponse,handleCampaignVariables,similaritySearch,fetchEnhancedConversationHistory} from "@/lib/serverUtils";
 import { getLLM } from "@/clients/llm";
+import { fetchIndex } from "@/app/actions/pc";
+import { addConversation } from "@/app/actions/prisma";
 
-const DEBOUNCE_SECONDS = 2;
+const DEBOUNCE_SECONDS = 4;
 const REDIS_MESSAGE_PREFIX = 'whatsapp:pending:';
-
-
 
 export async function POST(req: NextRequest ) {
     try {
@@ -27,67 +20,71 @@ export async function POST(req: NextRequest ) {
         const mobileNumber=data.mobileNumber || "1234567890"
         if (!query) {
           return NextResponse.json({ error: "Query is required" }, { status: 400 });
-      }
-      if (!mobileNumber) {
-          console.log("no mobile numbner")
-          return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
-      }
-      console.log(1)
-      await prisma.conversation.create({
-        data: {
-            spaceId: spaceId,
-            mobileNumber: mobileNumber,
-            sender:"USER",
-            content:query
-        },
-      });
+        }
+        if (!mobileNumber) {
+            console.log("no mobile numbner")
+            return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
+        }
+      
+      
+        console.log(1)
+        const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
+        const processingKey = `${userKey}:processing`;
+        const debounceKey = `${userKey}:debounce`;
+        console.log(2)
 
-      const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
-      const processingKey = `${userKey}:processing`;
-      console.log(2)
+        await addMessageToRedis(userKey, query);
+        console.log(3)
 
-      await addMessageToRedis(userKey, query);
-      console.log(3)
+        const isProcessing = await redis.get(processingKey);
+        if (isProcessing) {
+        console.log(4)
+            return NextResponse.json({message:"null"}, { status: 200 });
+        }
+        console.log(5)
 
-      const isProcessing = await redis.get(processingKey);
-      if (isProcessing) {
-      console.log(4)
-          return NextResponse.json({message:"null"}, { status: 200 });
-      }
-      console.log(5)
+        const isDebouncing = await redis.get(debounceKey);
+        if (isDebouncing) {
+                return NextResponse.json({ message: "" }, { status: 200 });
+        }
 
-      const debouncePromise = new Promise(resolve => {
-        setTimeout(resolve, DEBOUNCE_SECONDS * 1000);
-    }); 
-    await debouncePromise;
-    const space = await prisma.space.findFirst({
-        where: { id: spaceId },
-        select: { modelProvider: true },
-    });
-    console.log(space?.modelProvider)
-    const llmKey = `${spaceId}:llm`;
-    let llmProvider: string | null = await redis.get(llmKey);
-    if (!llmProvider) {
-        llmProvider = space?.modelProvider ?? "gemini";
-        await redis.set(llmKey, llmProvider);
-    }
-    console.log(6)
+        await redis.set(debounceKey, "true", "EX", DEBOUNCE_SECONDS);
 
-    const llm = getLLM(llmProvider);
-    console.log(7)
-    
-    // Process and get the actual response
-    const response = await processAggregatedMessages(llm, mobileNumber, spaceId,userKey);
-    console.log(response)
-    return NextResponse.json({ message: response }, { status: 200 });
-    } catch (error) {
-        console.error("Error processing request:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
+        const debouncePromise = new Promise(resolve => {
+            console.log("debouncePromise set")
+            setTimeout(resolve, DEBOUNCE_SECONDS * 1000);
+        }); 
+        await debouncePromise;
+        
+        const space = await prisma.space.findFirst({
+            where: { id: spaceId },
+            select: { modelProvider: true },
+        });
+
+        console.log(space?.modelProvider)
+        const llmKey = `${spaceId}:llm`;
+        let llmProvider: string | null = await redis.get(llmKey);
+        if (!llmProvider) {
+            llmProvider = space?.modelProvider ?? "gemini";
+            await redis.set(llmKey, llmProvider);
+        }
+        console.log(6)
+
+        const model = getLLM(llmProvider);
+        console.log(7)
+        
+        // Process and get the actual response
+        const response = await processAggregatedMessages(model, mobileNumber, spaceId,userKey);
+        console.log(response)
+        return NextResponse.json({ message: response }, { status: 200 });
+        } catch (error) {
+            console.error("Error processing request:", error);
+            return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        }
 }
 
 
-async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId: number , userKey:string): Promise<string> {
+async function processAggregatedMessages(model:any , mobileNumber: string, spaceId: number , userKey:string): Promise<string> {
   const processingKey = `${userKey}:processing`;
   
   try {
@@ -99,28 +96,28 @@ async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId
       
       const messages = messageItems.map(item => JSON.parse(item).message);
       const combinedQuery = messages.join(" ");
+      await addConversation(spaceId,mobileNumber,combinedQuery,"USER")
       
       console.log(`Processing aggregated messages for ${mobileNumber}:`, combinedQuery);
       
-      const indexName = "campaign" + spaceId;
-      const index = pc.index(indexName, `https://${indexName}-${process.env.PINECONE_URL}`);
-      
+      const index = await fetchIndex(spaceId)
+      console.log("starting")
       const pastConversations = await fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index,spaceId);
+      console.log("Fetched past conversations")
       const combinedConversations = pastConversations.join("\n");
+      console.log("fetched combined conversations")
       const relevantDocs = await similaritySearch(combinedQuery, index);
+      console.log("fetched relevant docs")
       const campaignVariables = await handleCampaignVariables(index, spaceId);
-      const response = await generateResponse(llm,combinedQuery, relevantDocs, combinedConversations, campaignVariables);
+      console.log("fetched campaign variables")
+      const response = await generateResponse(model,combinedQuery, relevantDocs, combinedConversations, campaignVariables);
+      console.log("generated response")
       
-      await saveConversationToVecDb(llm,mobileNumber, combinedQuery, response, index);
+      await saveConversationToVecDb(model,mobileNumber, combinedQuery, response, index);
       
-      await prisma.conversation.create({
-        data: {
-            spaceId: spaceId,
-            mobileNumber: mobileNumber,
-            sender:"BOT",
-            content:response
-        },
-    });
+      await addConversation(spaceId,mobileNumber,response,"BOT")
+
+      
       await redis.del(userKey);
       await redis.del(processingKey);
       return response
@@ -465,7 +462,7 @@ async function processAggregatedMessages(llm:any , mobileNumber: string, spaceId
 // async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promise<CampaignVariables> {
 //   try {
 //     // Create a dummy vector for querying (adjust dimension as needed)
-//     const dummyVector = new Array(384).fill(0);
+//     const dummyVector = new Array(768).fill(0);
     
 //     // Object to store our results
 //     const campaignData: CampaignVariables = {

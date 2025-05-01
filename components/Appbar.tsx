@@ -6,13 +6,15 @@ import { useRouter } from "next/navigation"
 import { ThemeSwitcher } from "./ThemeSwitcher"
 import Link from "next/link"
 import { appBar } from "@/constants/appBar"
-import { Menu } from "lucide-react"
+import { Moon, Sun,Menu } from "lucide-react"
 import { useState } from "react"
+import { useTheme } from "next-themes"
 
 export function Appbar({ showThemeSwitch = true }) {
   const session = useSession()
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { theme, setTheme } = useTheme()
   
   const navigateTo = (path: string, query = {}) => {
     setMobileMenuOpen(false)
@@ -33,26 +35,24 @@ export function Appbar({ showThemeSwitch = true }) {
   
 
   // Consistent styling classes
-  const linkClass = "text-sm font-medium text-gray-700 hover:text-black transition-colors"
-  const btnOutlineClass = "border-black bg-black text-white hover:bg-white hover:text-black transition-colors"
-  const btnFilledClass = "bg-black text-white hover:bg-gray-900 transition-colors"
+  const linkClass = "text-sm font-medium text-foreground hover:text-primary transition-colors"
+  const btnOutlineClass = "border-border bg-foreground text-background hover:bg-background hover:text-foreground transition-colors"
+  const btnFilledClass = "bg-foreground text-background hover:bg-muted transition-colors"
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div 
           onClick={() => navigateTo("/home")} 
           className="flex items-center gap-2 cursor-pointer"
         >
-          <span className="text-xl font-bold text-black">{appBar.appTitle}</span>
+          <span className="text-xl font-bold text-foreground">{appBar.appTitle}</span>
         </div>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-6">
           {session.data?.user ? (
             <>
-              
-
               <div className="flex items-center gap-4">
                 {showThemeSwitch && <ThemeSwitcher />}
                 <Button
@@ -87,21 +87,20 @@ export function Appbar({ showThemeSwitch = true }) {
 
         {/* Mobile Menu Button */}
         <button
-          className="md:hidden p-2 rounded-md hover:bg-gray-100"
+          className="md:hidden p-2 rounded-md hover:bg-muted"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
-          <Menu className="h-6 w-6 text-black" />
+          <Menu className="h-6 w-6 text-foreground" />
           <span className="sr-only">Toggle menu</span>
         </button>
       </div>
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white">
+        <div className="md:hidden border-t border-border bg-background">
           <div className="container mx-auto px-4 py-3 space-y-3">
             {session.data?.user ? (
               <>
-                
                 <div className="pt-2 flex items-center justify-between">
                   {showThemeSwitch && <ThemeSwitcher />}
                   <Button

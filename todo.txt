@@ -9,3 +9,10 @@ Add more campaignVariables
 process queue
 
 create dashboard - sentiment analysis , collect possitive reviews and negative reviews
+
+
+write an api to send the initial message , ie a get 
+
+try changing the chat api to get itself 
+
+Change promttemplate

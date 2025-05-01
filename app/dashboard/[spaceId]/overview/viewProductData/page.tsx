@@ -100,12 +100,12 @@ export default function PDFUploader() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">PDF Parser</h1>
+      <h1 className="text-2xl font-bold mb-6 text-foreground">PDF Parser</h1>
 
       <div className="grid gap-6">
-        <Card className="border-gray-200">
+        <Card className="border-border">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-gray-900">Upload PDF File</CardTitle>
+            <CardTitle className="text-xl font-semibold text-foreground">Upload PDF File</CardTitle>
           </CardHeader>
           <CardContent>
             <FilePond
@@ -130,8 +130,8 @@ export default function PDFUploader() {
 
             {isLoading && (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                <span className="ml-2 text-gray-600">Processing PDF...</span>
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/60" />
+                <span className="ml-2 text-muted-foreground">Processing PDF...</span>
               </div>
             )}
 
@@ -146,7 +146,7 @@ export default function PDFUploader() {
               <Button
                 onClick={clearResults}
                 variant="outline"
-                className="mt-4 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                className="mt-4 border-border text-gray-700 hover:bg-background hover:text-foreground"
               >
                 Clear Results
               </Button>
@@ -155,11 +155,11 @@ export default function PDFUploader() {
         </Card>
 
         {parsedText && (
-          <Card className="border-gray-200">
+          <Card className="border-border">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-gray-900">
+              <CardTitle className="text-xl font-semibold text-foreground">
                 <div className="flex items-center">
-                  <FileText className="mr-2 h-5 w-5 text-gray-600" />
+                  <FileText className="mr-2 h-5 w-5 text-muted-foreground" />
                   Parsed Text from {fileName}
                 </div>
               </CardTitle>
@@ -167,14 +167,14 @@ export default function PDFUploader() {
                 onClick={copyToClipboard}
                 variant="outline"
                 size="sm"
-                className="h-8 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                className="h-8 border-border text-gray-700 hover:bg-background hover:text-foreground"
               >
                 <Clipboard className="mr-2 h-4 w-4" />
                 Copy
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="bg-gray-50 p-4 rounded-md border border-gray-200 h-96 overflow-y-auto whitespace-pre-wrap text-gray-800 text-sm">
+              <div className="bg-background p-4 rounded-md border border-border h-96 overflow-y-auto whitespace-pre-wrap text-gray-800 text-sm">
                 {parsedText}
               </div>
             </CardContent>

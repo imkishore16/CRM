@@ -1,4 +1,4 @@
-"use server"
+'use server'
 
 import prisma from "@/lib/db";
 
@@ -51,6 +51,8 @@ export async function fetchConversationHistory(spaceId: number, mobileNumber: st
     return null;
   }
 }
+
+
 
 export const getUniqueMobileNumbersBySpace = async (spaceId: number) => {
   return await prisma.conversation.findMany({
