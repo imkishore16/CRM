@@ -333,12 +333,12 @@ export default async function LandingPage() {
                     </div>
                     <div className="flex justify-end">
                       <div className="bg-black p-3 rounded-lg rounded-tr-none max-w-[80%] text-white">
-                        <p className="text-sm">I'm looking for a new laptop for graphic design work.</p>
+                        <p className="text-sm">I&apos;m looking for a new laptop for graphic design work.</p>
                       </div>
                     </div>
                     <div className="bg-gray-100 p-3 rounded-lg rounded-tl-none max-w-[80%]">
                       <p className="text-sm">
-                        Great! For graphic design, I'd recommend our ProDesign X7 with 32GB RAM and dedicated GPU...
+                        Great! For graphic design, I&apos;d recommend our ProDesign X7 with 32GB RAM and dedicated GPU...
                       </p>
                     </div>
                   </div>
@@ -522,7 +522,7 @@ export default async function LandingPage() {
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-black sm:text-4xl mb-4">What Our Customers Say</h2>
             <p className="text-lg text-muted-foreground max-w-[700px] mx-auto">
-              Don't just take our word for it. Here's what our customers have to say about our platform.
+              Don&apos;t just take our word for it. Here&apos;s what our customers have to say about our platform.
             </p>
           </div>
 
@@ -536,13 +536,13 @@ export default async function LandingPage() {
               },
               {
                 quote:
-                  "The AI assistant feels incredibly natural. Our customers often don't realize they're talking to an AI until we tell them!",
+                  "The AI assistant feels incredibly natural. Our customers often don&apos;t realize they&apos;re talking to an AI until we tell them!",
                 author: "Michael Chen",
                 role: "Customer Success Manager, Retail Plus",
               },
               {
                 quote:
-                  "We've been able to provide 24/7 support without increasing our team size. The ROI has been incredible.",
+                  "We&apos;ve been able to provide 24/7 support without increasing our team size. The ROI has been incredible.",
                 author: "Jessica Williams",
                 role: "COO, Global Services",
               },
@@ -555,7 +555,7 @@ export default async function LandingPage() {
                     </svg>
                   ))}
                 </div>
-                <p className="text-gray-700 mb-4">"{testimonial.quote}"</p>
+                <p className="text-gray-700 mb-4">&quot;{testimonial.quote}&quot;</p>
                 <div>
                   <p className="font-medium text-foreground">{testimonial.author}</p>
                   <p className="text-sm text-muted-foreground">{testimonial.role}</p>

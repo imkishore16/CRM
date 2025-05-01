@@ -51,7 +51,7 @@ export default function ChatPage() {
           } else {
             const customInitialMessage =
               (await getCustomInitialMessage(Number.parseInt(spaceId))) ||
-              "Hello! I'm your AI assistant. How can I help you today?"
+              "Hello! I&apos;m your AI assistant. How can I help you today?"
             await addConversation(Number.parseInt(spaceId), spaceId, customInitialMessage, "BOT")
             setMessages([
               {
@@ -137,7 +137,7 @@ export default function ChatPage() {
         throw new Error(error.message || "Failed to get response")
       }
 
-      
+
     } catch (error) {
       console.error("Error in chat:", error)
       toast({

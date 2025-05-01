@@ -91,7 +91,7 @@ export default function DocumentationPage() {
             <CardContent className="p-6 space-y-8">
               <div>
                 <p className="text-gray-700 mb-6">
-                  Now that you understand the core variables, let's break down how to create effective prompts for each.
+                  Now that you understand the core variables, let&apos;s break down how to create effective prompts for each.
                   The goal is to guide the AI in the best possible way, so it can deliver optimal performance in your
                   campaign.
                 </p>
@@ -101,8 +101,8 @@ export default function DocumentationPage() {
                   <div className="border-b border-border pb-6">
                     <h3 className="text-lg font-semibold text-foreground mb-3">1. Campaign Name</h3>
                     <p className="text-gray-700 mb-3">
-                      The Campaign Name field doesn't directly affect the Chat. However, it should be descriptive enough
-                      to easily identify the campaign's purpose or target audience for internal use.
+                      The Campaign Name field doesn&apos;t directly affect the Chat. However, it should be descriptive enough
+                      to easily identify the campaign&apos;s purpose or target audience for internal use.
                     </p>
                     <div className="bg-background p-4 rounded-md">
                       <h4 className="font-medium text-gray-800 mb-2">Tips:</h4>
@@ -115,9 +115,9 @@ export default function DocumentationPage() {
                       </ul>
                       <h4 className="font-medium text-gray-800 mt-4 mb-2">Example:</h4>
                       <ul className="list-disc list-inside space-y-1 text-gray-700">
-                        <li>"1. User survey for the New Batch 05 - Hubspot 20k List (till 20th September)"</li>
-                        <li>"2.A. Pre webinar promotion - Website Inbound Leads"</li>
-                        <li>"2.B. Post webinar sales - Attendees (28th September)"</li>
+                        <li>&quot; 1. User survey for the New Batch 05 - Hubspot 20k List (till 20th September)&quot;</li>
+                        <li>&quot; 2.A. Pre webinar promotion - Website Inbound Leads&quot;</li>
+                        <li>&quot; 2.B. Post webinar sales - Attendees (28th September)&quot;</li>
                       </ul>
                     </div>
                   </div>
@@ -131,15 +131,15 @@ export default function DocumentationPage() {
                     <div className="bg-background p-4 rounded-md">
                       <ul className="list-disc list-inside space-y-2 text-gray-700">
                         <li>
-                          <span className="font-medium">"Survey":</span> For user interviews, lead qualifications,
+                          <span className="font-medium">&quot;Survey&quot; :</span> For user interviews, lead qualifications,
                           product-related feedback, etc.
                         </li>
                         <li>
-                          <span className="font-medium">"Sales":</span> For sales pitch about an offering, booking
+                          <span className="font-medium">&quot;Sales&quot; :</span> For sales pitch about an offering, booking
                           meetings, etc.
                         </li>
                         <li>
-                          <span className="font-medium">"Support":</span> For handling all inbound customer query
+                          <span className="font-medium">&quot;Support&quot;:</span> For handling all inbound customer query
                           messages, guiding users through their product journey, etc.
                         </li>
                       </ul>
@@ -163,14 +163,14 @@ export default function DocumentationPage() {
                       <ul className="list-disc list-inside space-y-1 text-gray-700 mb-3">
                         <li>Use the full name of the company or sub-product to ensure clarity.</li>
                         <li>
-                          Use relevant words, such as 'from' or 'by', to show the connection between the
+                          {"Use relevant words, such as 'from' or 'by', to show the connection between the"}
                           sub-brand/sub-product and the main company.
                         </li>
                       </ul>
                       <p className="text-gray-700 mb-2">Example:</p>
                       <ul className="list-disc list-inside space-y-1 text-gray-700">
-                        <li>"Diet Coke by The Coca-Cola Company"</li>
-                        <li>"Here from HDFC ERGO"</li>
+                        <li>&quot;Diet Coke by The Coca-Cola Company&quot; </li>
+                        <li>&quot;Here from HDFC ERGO&quot; </li>
                       </ul>
                     </div>
                     <div className="bg-background p-4 rounded-md">
@@ -185,12 +185,12 @@ export default function DocumentationPage() {
                       <p className="text-gray-700 mb-2">Example:</p>
                       <ul className="list-disc list-inside space-y-1 text-gray-700 mb-3">
                         <li>
-                          "Helping business leaders manage stress, deal with procrastination, and unlock their
-                          potential."
+                        &quot;Helping business leaders manage stress, deal with procrastination, and unlock their
+                          potential.&quot;
                         </li>
                       </ul>
                       <p className="text-gray-700 italic">
-                        Pro Tip: Write the description in a way that resonates with the campaign's target audience.
+                        Pro Tip: Write the description in a way that resonates with the campaign&apos;s target audience.
                       </p>
                     </div>
                   </div>
@@ -221,9 +221,9 @@ export default function DocumentationPage() {
                   <div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">Use Second Person POV</h3>
                     <p className="text-gray-700">
-                      Instruct the AI addressing as "you" and "your," as if speaking directly to it. Be clear but
-                      conversational, using phrases you'd naturally use with your end users.
-                    </p>
+                      {"Instruct the AI addressing as 'you' and 'your,' as if speaking directly to it. Be clear but "}
+                      {"conversational, using phrases you'd naturally use with your end users."}
+                  </p>
                   </div>
                 </div>
 
@@ -253,8 +253,8 @@ export default function DocumentationPage() {
                       the precise language to be used.
                     </p>
                     <p className="text-gray-700 mt-2 italic">
-                      Example: THANK the user for replying. ASK if they have attended any "Java and Spring Boot
-                      development" interviews recently.
+                      Example: THANK the user for replying. ASK if they have attended any &quot;Java and Spring Boot
+                      development&quot; interviews recently.
                     </p>
                   </div>
                 </div>

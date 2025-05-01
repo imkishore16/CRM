@@ -69,7 +69,7 @@ export default function SetTargetCustomersForm() {
   }, [spaceId, toast])
 
   const addNewRow = () => {
-    setRows([...rows, { id: useId(), mobile: "", text: "" }])
+    setRows([...rows, { id: crypto.randomUUID(), mobile: "", text: "" }])
   }
 
   const updateRow = (id: string, field: keyof Omit<FormRow, "id">, value: string) => {

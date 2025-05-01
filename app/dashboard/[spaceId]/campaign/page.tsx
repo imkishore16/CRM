@@ -53,7 +53,7 @@ export default function CampaignPage({ params }: CampaignPageProps) {
             setMessages(historyMessages);
           } else {
             console.log("2")
-            const customInitalMessage = await getCustomInitialMessage(parseInt(spaceId)) || "Hello! I'm your AI assistant. How can I help you today?"
+            const customInitalMessage = await getCustomInitialMessage(parseInt(spaceId)) || "Hello! I&apos;m your AI assistant. How can I help you today?"
             await addConversation(parseInt(spaceId),spaceId,customInitalMessage,"BOT")
             setMessages([
               {
@@ -90,7 +90,7 @@ export default function CampaignPage({ params }: CampaignPageProps) {
     };
     
     loadConversationHistory();
-  }, [chatExpanded, spaceId, toast, messages.length, spaceId]);
+  }, [chatExpanded, toast, messages.length, spaceId]);
 
   const startCampaign = async () => {
     setIsLoading(true)
