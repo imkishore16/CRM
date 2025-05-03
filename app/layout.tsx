@@ -40,30 +40,7 @@ export const metadata: Metadata = {
   ],
 }
 
-// export default function RootLayout({
-//   children,
-// }: Readonly<{
-//   children: React.ReactNode
-// }>) {
-//   return (
-//     <html lang="en" suppressHydrationWarning>
-//       <body className={`${inter.className} bg-background text-black`}>
-//         <Toaster {...toastOptions} />
-//         <ThemeProvider
-//           attribute="class"
-//           defaultTheme="light" 
-//           disableTransitionOnChange
-//           enableSystem
-//         >
-//           <Providers>
-//             <Appbar />
-//             <main>{children}</main>
-//           </Providers>
-//         </ThemeProvider>
-//       </body>
-//     </html>
-//   )
-// }
+
 
 export default function RootLayout({
   children,
