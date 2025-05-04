@@ -116,6 +116,7 @@ import {
   handleCampaignVariables
 } from "@/lib/serverUtils";
 import { addConversation } from "@/app/actions/prisma";
+import { parseToolCalls, handleToolCall } from '@/lib/toolParser';
 
 async function parseFormEncodedBody(req: NextRequest) {
   const rawBody = await req.text(); 
@@ -139,12 +140,13 @@ export async function POST(req: NextRequest) {
           select: { spaceId: true },
       });
       const spaceId = spaceCustomer?.spaceId ?? 0;
+      
 
       await addConversation(spaceId, mobileNumber, query, "USER");
 
       const space = await prisma.space.findFirst({
           where: { id: spaceId },
-          select: { modelProvider: true },
+          select: { modelProvider: true ,userId: true},
       });
       const llmProvider = space?.modelProvider ?? "gemini";
       const llm = getLLM(llmProvider);
@@ -157,7 +159,7 @@ export async function POST(req: NextRequest) {
       const campaignVariables = await handleCampaignVariables(index, spaceId);
       
       // Generate and save response
-      const response = await generateResponse(llm, query, relevantDocs, combinedConversations, campaignVariables);
+      let response = await generateResponse(llm, query, relevantDocs, combinedConversations, campaignVariables);
       await saveConversationToVecDb(llm, mobileNumber, query, response, index);
       await addConversation(spaceId, mobileNumber, response, "BOT");
 
@@ -166,6 +168,40 @@ export async function POST(req: NextRequest) {
           from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
           to: `whatsapp:${mobileNumber}`
       });
+
+      const toolCalls = parseToolCalls(response);
+
+    for (const toolCall of toolCalls) {
+    try {
+        // Store the original matched tool call text
+        const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+        const match = originalToolCallRegex.exec(response);
+        
+        if (!match) {
+            console.error(`Could not find original tool call for ${toolCall.tool} in response`);
+            continue;
+        }
+        
+        const originalToolCallText = match[0];
+        const toolResponse = await handleToolCall(toolCall, space?.userId?.toString() ?? "0");
+        
+        // Replace the exact original text
+        response = response.replace(originalToolCallText, toolResponse);
+    } catch (error) {
+        console.error(`Error handling tool call ${toolCall.tool}:`, error);
+        
+        // Find and replace the original tool call text
+        const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+        const match = originalToolCallRegex.exec(response);
+        
+        if (match) {
+            response = response.replace(
+                match[0],
+                "Sorry, I couldn't schedule the meeting. Please try again."
+            );
+        }
+    }
+}
 
       return NextResponse.json({ message: response }, { status: 200 });
 

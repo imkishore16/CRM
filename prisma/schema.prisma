@@ -20,6 +20,10 @@ model User {
   provider         Provider
   id               Int      @id @default(autoincrement())
   createdSpaces    Space[]  @relation("createdBy")
+
+  googleAccessToken  String?
+  googleRefreshToken String?
+  googleTokenExpiry  DateTime?
 }
 
 model Space {

@@ -57,6 +57,8 @@
     "formidable": "^3.5.2",
     "framer-motion": "^11.9.0",
     "fs": "^0.0.1-security",
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^148.0.0",
     "ioredis": "^5.6.0",
     "jsonwebtoken": "^8.5.1",
     "langchain": "^0.3.15",
