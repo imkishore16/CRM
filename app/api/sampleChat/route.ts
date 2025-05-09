@@ -6,83 +6,132 @@ import { addMessageToRedis,saveConversationToVecDb,generateResponse,handleCampai
 import { getLLM } from "@/clients/llm";
 import { fetchIndex } from "@/app/actions/pc";
 import { addConversation } from "@/app/actions/prisma";
+import { handleToolCall, parseToolCalls } from "@/lib/toolParser";
 
 const DEBOUNCE_SECONDS = 4;
 const REDIS_MESSAGE_PREFIX = 'whatsapp:pending:';
 
-export async function POST(req: NextRequest ) {
+// export async function POST(req: NextRequest ) {
+//     try {
+//         const { searchParams } = new URL(req.url);
+
+//         const spaceId = parseInt(searchParams.get("spaceId") ?? "0")
+//         const data= await req.json();
+//         const query = data.query as string;
+//         const mobileNumber=data.mobileNumber || "1234567890"
+//         if (!query) {
+//           return NextResponse.json({ error: "Query is required" }, { status: 400 });
+//         }
+//         if (!mobileNumber) {
+//             console.log("no mobile numbner")
+//             return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
+//         }
+      
+      
+//         console.log(1)
+//         const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
+//         const processingKey = `${userKey}:processing`;
+//         const debounceKey = `${userKey}:debounce`;
+//         console.log(2)
+
+//         await addMessageToRedis(userKey, query);
+//         console.log(3)
+
+//         const isProcessing = await redis.get(processingKey);
+//         if (isProcessing) {
+//         console.log(4)
+//             return NextResponse.json({message:"null"}, { status: 200 });
+//         }
+//         console.log(5)
+
+//         const isDebouncing = await redis.get(debounceKey);
+//         if (isDebouncing) {
+//                 return NextResponse.json({ message: "" }, { status: 200 });
+//         }
+
+//         await redis.set(debounceKey, "true", "EX", DEBOUNCE_SECONDS);
+
+//         const debouncePromise = new Promise(resolve => {
+//             console.log("debouncePromise set")
+//             setTimeout(resolve, DEBOUNCE_SECONDS * 1000);
+//         }); 
+//         await debouncePromise;
+        
+//         const space = await prisma.space.findFirst({
+//             where: { id: spaceId },
+//             select: { modelProvider: true },
+//         });
+
+//         console.log(space?.modelProvider)
+//         const llmKey = `${spaceId}:llm`;
+//         let llmProvider: string | null = await redis.get(llmKey);
+//         if (!llmProvider) {
+//             llmProvider = space?.modelProvider ?? "gemini";
+//             await redis.set(llmKey, llmProvider);
+//         }
+//         console.log(6)
+
+//         const model = getLLM(llmProvider);
+//         console.log(7)
+        
+//         // Process and get the actual response
+//         const response = await processAggregatedMessages(model, mobileNumber, spaceId,userKey);
+//         console.log(response)
+//         return NextResponse.json({ message: response }, { status: 200 });
+//         } catch (error) {
+//             console.error("Error processing request:", error);
+//             return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+//         }
+// }
+export async function POST(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
-
         const spaceId = parseInt(searchParams.get("spaceId") ?? "0")
-        const data= await req.json();
+        const data = await req.json();
         const query = data.query as string;
-        const mobileNumber=data.mobileNumber || "1234567890"
-        if (!query) {
-          return NextResponse.json({ error: "Query is required" }, { status: 400 });
+        const mobileNumber = data.mobileNumber || "1234567890"
+
+        if (!query || !mobileNumber) {
+            return NextResponse.json({ error: "Query and mobileNumber are required" }, { status: 400 });
         }
-        if (!mobileNumber) {
-            console.log("no mobile numbner")
-            return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
-        }
-      
-      
-        console.log(1)
+
         const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
-        const processingKey = `${userKey}:processing`;
         const debounceKey = `${userKey}:debounce`;
-        console.log(2)
 
+        // Add message to queue
         await addMessageToRedis(userKey, query);
-        console.log(3)
 
-        const isProcessing = await redis.get(processingKey);
-        if (isProcessing) {
-        console.log(4)
-            return NextResponse.json({message:"null"}, { status: 200 });
-        }
-        console.log(5)
-
+        // Check if we're in debounce period
         const isDebouncing = await redis.get(debounceKey);
         if (isDebouncing) {
-                return NextResponse.json({ message: "" }, { status: 200 });
+            return NextResponse.json({ message: "" }, { status: 200 });
         }
 
+        // Set debounce lock with expiration
         await redis.set(debounceKey, "true", "EX", DEBOUNCE_SECONDS);
 
-        const debouncePromise = new Promise(resolve => {
-            console.log("debouncePromise set")
-            setTimeout(resolve, DEBOUNCE_SECONDS * 1000);
-        }); 
-        await debouncePromise;
-        
+        // Wait for debounce period
+        await new Promise(resolve => setTimeout(resolve, DEBOUNCE_SECONDS * 1000));
+
         const space = await prisma.space.findFirst({
             where: { id: spaceId },
             select: { modelProvider: true },
         });
 
-        console.log(space?.modelProvider)
-        const llmKey = `${spaceId}:llm`;
-        let llmProvider: string | null = await redis.get(llmKey);
-        if (!llmProvider) {
-            llmProvider = space?.modelProvider ?? "gemini";
-            await redis.set(llmKey, llmProvider);
-        }
-        console.log(6)
-
-        const model = getLLM(llmProvider);
-        console.log(7)
+        const model = getLLM(space?.modelProvider ?? "gemini");
         
-        // Process and get the actual response
-        const response = await processAggregatedMessages(model, mobileNumber, spaceId,userKey);
-        console.log(response)
-        return NextResponse.json({ message: response }, { status: 200 });
-        } catch (error) {
-            console.error("Error processing request:", error);
-            return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        try {
+            const response = await processAggregatedMessages(model, mobileNumber, spaceId, userKey);
+            return NextResponse.json({ message: response }, { status: 200 });
+        } finally {
+            // Ensure debounce key is cleared even if processing fails
+            await redis.del(debounceKey);
         }
+    } catch (error) {
+        console.error("Error processing request:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    }
 }
-
 
 async function processAggregatedMessages(model:any , mobileNumber: string, spaceId: number , userKey:string): Promise<string> {
   const processingKey = `${userKey}:processing`;
@@ -110,11 +159,46 @@ async function processAggregatedMessages(model:any , mobileNumber: string, space
       console.log("fetched relevant docs")
       const campaignVariables = await handleCampaignVariables(index, spaceId);
       console.log("fetched campaign variables")
-      const response = await generateResponse(model,combinedQuery, relevantDocs, combinedConversations, campaignVariables);
+      let response = await generateResponse(model,combinedQuery, relevantDocs, combinedConversations, campaignVariables);
       console.log("generated response")
       
-      await saveConversationToVecDb(model,mobileNumber, combinedQuery, response, index);
+      const toolCalls = parseToolCalls(response);
+      for (const toolCall of toolCalls) {
+          try {
+              const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+              const match = originalToolCallRegex.exec(response);
+              
+              if (!match) {
+                  console.error(`Could not find original tool call for ${toolCall.tool} in response`);
+                  continue;
+              }
+              
+              const space = await prisma.space.findFirst({
+                  where: { id: spaceId },
+                  select: { userId: true },
+              });
+              
+              const originalToolCallText = match[0];
+              const toolResponse = await handleToolCall(toolCall, space?.userId?.toString() ?? "0");
+              
+              // Replace the exact original text
+              response = response.replace(originalToolCallText, toolResponse);
+          } catch (error) {
+              console.error(`Error handling tool call ${toolCall.tool}:`, error);
+              
+              const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+              const match = originalToolCallRegex.exec(response);
+              
+              if (match) {
+                  response = response.replace(
+                      match[0],
+                      "Sorry, I couldn't schedule the meeting. Please try again."
+                  );
+              }
+          }
+      }
       
+      await saveConversationToVecDb(model,mobileNumber, combinedQuery, response, index);
       await addConversation(spaceId,mobileNumber,response,"BOT")
 
       
