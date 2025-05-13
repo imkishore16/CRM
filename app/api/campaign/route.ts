@@ -61,7 +61,7 @@ export async function POST(req:NextRequest){
 export async function customFirstMessage(index:any,model:any ,mobileNumber: string,campaignVariables:CampaignVariables): Promise<string> {
   const customerData = await fetchCustomerData(index,mobileNumber)
   console.log("customerData : ",customerData)
-  const llmResponse = await generateResponse(model,"","",customerData,"",campaignVariables)
+  const llmResponse = await generateResponse(model,"","",customerData,"","",campaignVariables)
   return llmResponse
 }
 

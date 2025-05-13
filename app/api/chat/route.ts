@@ -107,7 +107,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import twilioClient from "@/clients/twilioClient";
 import { getLLM } from "@/clients/llm";
-import { fetchIndex } from "@/app/actions/pc";
+import { fetchCustomerData, fetchIndex, fetchProductLinks } from "@/app/actions/pc";
 import { 
   fetchEnhancedConversationHistory, 
   saveConversationToVecDb, 
@@ -157,9 +157,10 @@ export async function POST(req: NextRequest) {
       const combinedConversations = pastConversations.join("\n");
       const relevantDocs = await similaritySearch(query, index);
       const campaignVariables = await handleCampaignVariables(index, spaceId);
-      
+      const customerData = await fetchCustomerData(index, mobileNumber);
+      const productLinks = await fetchProductLinks(index);
       // Generate and save response
-      let response = await generateResponse(llm, query, relevantDocs, combinedConversations, campaignVariables);
+      let response = await generateResponse(llm, query, relevantDocs, customerData,productLinks, combinedConversations, campaignVariables);
       await saveConversationToVecDb(llm, mobileNumber, query, response, index);
       await addConversation(spaceId, mobileNumber, response, "BOT");
 

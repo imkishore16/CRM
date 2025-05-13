@@ -4,7 +4,7 @@ import redis from "@/clients/redis";
 import prisma from "@/lib/db";
 import { addMessageToRedis,saveConversationToVecDb,generateResponse,handleCampaignVariables,similaritySearch,fetchEnhancedConversationHistory} from "@/lib/serverUtils";
 import { getLLM } from "@/clients/llm";
-import { fetchCustomerData, fetchIndex } from "@/app/actions/pc";
+import { fetchCustomerData, fetchIndex, fetchProductLinks } from "@/app/actions/pc";
 import { addConversation } from "@/app/actions/prisma";
 import { handleToolCall, parseToolCalls } from "@/lib/toolParser";
 import { savePersonalInfoToVecDb } from "@/lib/personalInfoStorage";
@@ -13,126 +13,220 @@ import { detectPersonalInfo } from "@/lib/personalInfoDetector";
 const DEBOUNCE_SECONDS = 4;
 const REDIS_MESSAGE_PREFIX = 'whatsapp:pending:';
 
-// export async function POST(req: NextRequest ) {
-//     try {
-//         const { searchParams } = new URL(req.url);
+interface ChatRequest {
+  query: string;
+  mobileNumber: string;
+  context?: {
+    type: "CONFIRMATION" | "SCHEDULING" | "RESCHEDULING" | "CANCELLATION" | "GENERAL";
+    data?: {
+      date?: string;
+      time?: string;
+      eventId?: string;
+      action?: string;
+    };
+  };
+}
 
-//         const spaceId = parseInt(searchParams.get("spaceId") ?? "0")
-//         const data= await req.json();
-//         const query = data.query as string;
-//         const mobileNumber=data.mobileNumber || "1234567890"
-//         if (!query) {
-//           return NextResponse.json({ error: "Query is required" }, { status: 400 });
-//         }
-//         if (!mobileNumber) {
-//             console.log("no mobile numbner")
-//             return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
-//         }
-      
-      
-//         console.log(1)
-//         const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
-//         const processingKey = `${userKey}:processing`;
-//         const debounceKey = `${userKey}:debounce`;
-//         console.log(2)
+export async function POST(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const spaceId = parseInt(searchParams.get("spaceId") ?? "0");
+    const body: ChatRequest = await req.json();
+    const { query, mobileNumber, context } = body;
 
-//         await addMessageToRedis(userKey, query);
-//         console.log(3)
+    // Handle short responses with context
+    if (query.split(' ').length <= 3 && context) {
+      const isAffirmative = isAffirmativeResponse(query);
+      const isNegative = isNegativeResponse(query);
 
-//         const isProcessing = await redis.get(processingKey);
-//         if (isProcessing) {
-//         console.log(4)
-//             return NextResponse.json({message:"null"}, { status: 200 });
-//         }
-//         console.log(5)
-
-//         const isDebouncing = await redis.get(debounceKey);
-//         if (isDebouncing) {
-//                 return NextResponse.json({ message: "" }, { status: 200 });
-//         }
-
-//         await redis.set(debounceKey, "true", "EX", DEBOUNCE_SECONDS);
-
-//         const debouncePromise = new Promise(resolve => {
-//             console.log("debouncePromise set")
-//             setTimeout(resolve, DEBOUNCE_SECONDS * 1000);
-//         }); 
-//         await debouncePromise;
+      if (context.type === "SCHEDULING" && isAffirmative && context.data?.date && context.data?.time) {
+        // Get customer data and campaign variables for the description
+        const index = await fetchIndex(spaceId);
+        const customerData = await fetchCustomerData(index, mobileNumber);
+        const campaignVariables = await handleCampaignVariables(index, spaceId);
         
-//         const space = await prisma.space.findFirst({
-//             where: { id: spaceId },
-//             select: { modelProvider: true },
-//         });
+        // Create a descriptive meeting title
+        const description = `Meeting with ${customerData?.name || mobileNumber} - ${campaignVariables.campaignName}\n\n` +
+          `Campaign: ${campaignVariables.campaignName}\n` +
+          `Company: ${campaignVariables.overrideCompany}\n` +
+          `Objective: ${campaignVariables.campaignObjective}\n` +
+          (customerData ? `\nCustomer Details:\n${Object.entries(customerData)
+            .filter(([key]) => key !== 'id' && key !== '_id')
+            .map(([key, value]) => `${key}: ${value}`)
+            .join('\n')}` : '');
 
-//         console.log(space?.modelProvider)
-//         const llmKey = `${spaceId}:llm`;
-//         let llmProvider: string | null = await redis.get(llmKey);
-//         if (!llmProvider) {
-//             llmProvider = space?.modelProvider ?? "gemini";
-//             await redis.set(llmKey, llmProvider);
-//         }
-//         console.log(6)
-
-//         const model = getLLM(llmProvider);
-//         console.log(7)
-        
-//         // Process and get the actual response
-//         const response = await processAggregatedMessages(model, mobileNumber, spaceId,userKey);
-//         console.log(response)
-//         return NextResponse.json({ message: response }, { status: 200 });
-//         } catch (error) {
-//             console.error("Error processing request:", error);
-//             return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-//         }
-// }
-export async function POST(req: NextRequest) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const spaceId = parseInt(searchParams.get("spaceId") ?? "0")
-        const data = await req.json();
-        const query = data.query as string;
-        const mobileNumber = data.mobileNumber || "1234567890"
-
-        if (!query || !mobileNumber) {
-            return NextResponse.json({ error: "Query and mobileNumber are required" }, { status: 400 });
-        }
-
-        const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
-        const debounceKey = `${userKey}:debounce`;
-
-        // Add message to queue
-        await addMessageToRedis(userKey, query);
-
-        // Check if we're in debounce period
-        const isDebouncing = await redis.get(debounceKey);
-        if (isDebouncing) {
-            return NextResponse.json({ message: "" }, { status: 200 });
-        }
-
-        // Set debounce lock with expiration
-        await redis.set(debounceKey, "true", "EX", DEBOUNCE_SECONDS);
-
-        // Wait for debounce period
-        await new Promise(resolve => setTimeout(resolve, DEBOUNCE_SECONDS * 1000));
-
+        // Get the space's userId
         const space = await prisma.space.findFirst({
-            where: { id: spaceId },
-            select: { modelProvider: true },
+          where: { id: spaceId },
+          select: { userId: true },
         });
 
-        const model = getLLM(space?.modelProvider ?? "gemini");
+        // Execute the scheduling action
+        const result = await handleToolCall({
+          tool: "schedule_meeting",
+          parameters: {
+            date: context.data.date,
+            time: context.data.time,
+            description: description
+          }
+        }, space?.userId?.toString() ?? "0");
+        return new Response(JSON.stringify({
+          message: result,
+          context: null // Clear context after action
+        }));
+      }
+
+      if (context.type === "RESCHEDULING" && isAffirmative && context.data?.eventId && context.data?.date && context.data?.time) {
+        // Get customer data and campaign variables for the description
+        const index = await fetchIndex(spaceId);
+        const customerData = await fetchCustomerData(index, mobileNumber);
+        const campaignVariables = await handleCampaignVariables(index, spaceId);
         
-        try {
-            const response = await processAggregatedMessages(model, mobileNumber, spaceId, userKey);
-            return NextResponse.json({ message: response }, { status: 200 });
-        } finally {
-            // Ensure debounce key is cleared even if processing fails
-            await redis.del(debounceKey);
-        }
-    } catch (error) {
-        console.error("Error processing request:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        // Create a descriptive meeting title
+        const description = `Meeting with ${customerData?.name || mobileNumber} - ${campaignVariables.campaignName}\n\n` +
+          `Campaign: ${campaignVariables.campaignName}\n` +
+          `Company: ${campaignVariables.overrideCompany}\n` +
+          `Objective: ${campaignVariables.campaignObjective}\n` +
+          (customerData ? `\nCustomer Details:\n${Object.entries(customerData)
+            .filter(([key]) => key !== 'id' && key !== '_id')
+            .map(([key, value]) => `${key}: ${value}`)
+            .join('\n')}` : '');
+
+        // Get the space's userId
+        const space = await prisma.space.findFirst({
+          where: { id: spaceId },
+          select: { userId: true },
+        });
+
+        // Execute the rescheduling action
+        const result = await handleToolCall({
+          tool: "reschedule_meeting",
+          parameters: {
+            eventId: context.data.eventId,
+            date: context.data.date,
+            time: context.data.time,
+            description: description
+          }
+        }, space?.userId?.toString() ?? "0");
+        return new Response(JSON.stringify({
+          message: result,
+          context: null // Clear context after action
+        }));
+      }
+
+      if (context.type === "CANCELLATION" && isAffirmative && context.data?.eventId) {
+        // Get the space's userId
+        const space = await prisma.space.findFirst({
+          where: { id: spaceId },
+          select: { userId: true },
+        });
+
+        // Execute the cancellation action
+        const result = await handleToolCall({
+          tool: "cancel_meeting",
+          parameters: {
+            eventId: context.data.eventId
+          }
+        }, space?.userId?.toString() ?? "0");
+        return new Response(JSON.stringify({
+          message: result,
+          context: null // Clear context after action
+        }));
+      }
+
+      if (isNegative) {
+        return new Response(JSON.stringify({
+          message: "I understand you don't want to proceed. What would you like to do instead?",
+          context: null // Clear context on negative response
+        }));
+      }
     }
+
+    // Get the model provider
+    const space = await prisma.space.findFirst({
+      where: { id: spaceId },
+      select: { modelProvider: true },
+    });
+    const model = getLLM(space?.modelProvider ?? "gemini");
+
+    // Process the message normally with the LLM
+    const userKey = `${REDIS_MESSAGE_PREFIX}${spaceId}:${mobileNumber}`;
+    const messages = await processAggregatedMessages(model, mobileNumber, spaceId, userKey);
+    
+    // Extract potential context from the LLM response
+    let newContext = null;
+    if (messages.includes("Would you like to schedule this meeting for")) {
+      const dateMatch = messages.match(/(\d{4}-\d{2}-\d{2})/);
+      const timeMatch = messages.match(/(\d{2}:\d{2})/);
+      if (dateMatch && timeMatch) {
+        newContext = {
+          type: "SCHEDULING",
+          data: {
+            date: dateMatch[1],
+            time: timeMatch[1]
+          }
+        };
+      }
+    } else if (messages.includes("Would you like to reschedule this meeting to")) {
+      const dateMatch = messages.match(/(\d{4}-\d{2}-\d{2})/);
+      const timeMatch = messages.match(/(\d{2}:\d{2})/);
+      const eventIdMatch = messages.match(/eventId:\s*['"]([^'"]+)['"]/);
+      if (dateMatch && timeMatch && eventIdMatch) {
+        newContext = {
+          type: "RESCHEDULING",
+          data: {
+            date: dateMatch[1],
+            time: timeMatch[1],
+            eventId: eventIdMatch[1]
+          }
+        };
+      }
+    } else if (messages.includes("Are you sure you want to cancel this meeting?")) {
+      const eventIdMatch = messages.match(/eventId:\s*['"]([^'"]+)['"]/);
+      if (eventIdMatch) {
+        newContext = {
+          type: "CANCELLATION",
+          data: {
+            eventId: eventIdMatch[1]
+          }
+        };
+      }
+    }
+
+    return new Response(JSON.stringify({
+      message: messages,
+      context: newContext
+    }));
+
+  } catch (error) {
+    console.error('Error in chat endpoint:', error);
+    return new Response(JSON.stringify({
+      message: "Sorry, I encountered an error. Please try again.",
+      context: null
+    }), { status: 500 });
+  }
+}
+
+// Helper functions to detect response types
+function isAffirmativeResponse(text: string): boolean {
+  const affirmativeWords = [
+    'yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'alright', 'fine',
+    'good', 'great', 'perfect', 'cool', 'definitely', 'absolutely',
+    'confirmed', 'correct', 'right', 'sounds good', 'that works'
+  ];
+  return affirmativeWords.some(word => 
+    text.toLowerCase().includes(word.toLowerCase())
+  );
+}
+
+function isNegativeResponse(text: string): boolean {
+  const negativeWords = [
+    'no', 'nope', 'nah', 'not', 'dont', "don't", 'cancel',
+    'wrong', 'incorrect', 'reschedule', 'change', 'different'
+  ];
+  return negativeWords.some(word => 
+    text.toLowerCase().includes(word.toLowerCase())
+  );
 }
 
 async function processAggregatedMessages(model:any , mobileNumber: string, spaceId: number , userKey:string): Promise<string> {
@@ -170,7 +264,8 @@ async function processAggregatedMessages(model:any , mobileNumber: string, space
       const campaignVariables = await handleCampaignVariables(index, spaceId);
       console.log("fetched campaign variables")
       const customerData = await fetchCustomerData(index,mobileNumber)
-      let response = await generateResponse(model,combinedQuery, relevantDocs, customerData, combinedConversations, campaignVariables);
+      const productLinks = await fetchProductLinks(index);
+      let response = await generateResponse(model,combinedQuery, relevantDocs, customerData,productLinks, combinedConversations, campaignVariables);
       console.log("generated response")
       
       const toolCalls = parseToolCalls(response);

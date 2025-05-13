@@ -5,6 +5,8 @@ import { getLLM } from "@/clients/llm";
 import { handleCampaignVariables } from "@/lib/serverUtils";
 import { customFirstMessage } from "../api/campaign/route";
 import { error } from "console";
+import embeddingModel from "@/clients/embeddingModel";
+
 
 
 export async function fetchIndex(spaceId: number, namespace?: string) {
@@ -68,4 +70,102 @@ export async function fetchCustomerData(index: any, mobileNumber: string) {
     return
   }
   
+}
+
+export async function fetchProductLinks(index: any) {
+  console.log("Fetching Product links...");
+  try {
+    const queryResponse = await index.namespace("links").query({
+      topK: 100, // Adjust based on how many links you expect to have
+      includeMetadata: true,
+      vector: new Array(768).fill(0), // Dummy vector to get all results
+      filter: {
+        $or: [
+          { "metadata.key": { $exists: true } },
+          { "metadata.text": { $exists: true } }
+        ]
+      }
+    });
+
+    if (!queryResponse.matches || queryResponse.matches.length === 0) {
+      console.log("No product links found");
+      return [];
+    }
+
+    // Transform the response into a more usable format
+    const links = queryResponse.matches.map((match: { 
+      metadata?: { 
+        key?: string; 
+        text?: string; 
+      }; 
+      score?: number;
+    }) => ({
+      description: match.metadata?.key || '',
+      url: match.metadata?.text || '',
+      score: match.score
+    }));
+
+    console.log(`Found ${links.length} product links :` , links);
+    return links;
+  } catch (error) {
+    console.error("Error fetching product links:", error);
+    return [];
+  }
+}
+
+interface CustomerData {
+  name?: string;
+  role?: string;
+  company?: string;
+  pain_points?: string[];
+  interests?: string[];
+  mobile_number: string;
+  last_updated?: string;
+  [key: string]: any; // Allow for additional fields
+}
+
+export async function saveCustomerData(index: any, data: CustomerData) {
+  console.log("Saving customer data:", data);
+  try {
+    if (!data.mobile_number) {
+      throw new Error("Mobile number is required to save customer data");
+    }
+
+    // Add timestamp
+    const enrichedData = {
+      ...data,
+      last_updated: new Date().toISOString()
+    };
+
+    // Create a string representation of the data for embedding
+    const dataString = Object.entries(enrichedData)
+      .map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return `${key}: ${value.join(", ")}`;
+        }
+        return `${key}: ${value}`;
+      })
+      .join("\n");
+
+    // Get embeddings for the customer data
+    const embedding = await embeddingModel.embedQuery(dataString);
+
+    // Prepare the vector for Pinecone
+    const vector = {
+      id: data.mobile_number,
+      values: embedding,
+      metadata: {
+        data: enrichedData
+      }
+    };
+
+    // Upsert the vector to Pinecone
+    await index.namespace("customerdata").upsert([vector]);
+
+    console.log("Successfully saved customer data for:", data.mobile_number);
+    return true;
+  } catch (error) {
+    console.error("Error saving customer data:", error);
+    return false;
+  }
 }

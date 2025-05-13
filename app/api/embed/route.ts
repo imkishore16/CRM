@@ -717,7 +717,7 @@ async function embedCustomProductData2(file: File, index: any): Promise<any> {
     // Search for relevant sections or documents
     const searchResults = await index.query({
       vector: queryEmbedding,
-      topK: 5,
+      topK: 10,
       filter: { type: { $in: ['product_data', 'product_section'] } },
       includeMetadata: true
     });

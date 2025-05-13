@@ -9,7 +9,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { chatTemplate } from "@/constants/chatTemplate";
 import { CampaignVariables } from "@/types";
 import { addConversation } from "@/app/actions/prisma";
-import { fetchIndex } from "@/app/actions/pc";
+import { fetchIndex, fetchProductLinks } from "@/app/actions/pc";
 import { fetchCustomerData } from "@/app/actions/pc";
 
 
@@ -91,7 +91,7 @@ export async function fetchSimilarConversations(query:string , mobileNumber: str
         // console.log("queryEmbedding : ", queryEmbedding)
         const queryResponse = await index.namespace(mobileNumber).query({
           vector: queryEmbedding,
-          topK: 5,
+          topK: 10,
           includeMetadata: true,
           
         });
@@ -234,7 +234,8 @@ export async function processAggregatedMessages(llm:any , mobileNumber: string, 
       const relevantDocs = await similaritySearch(combinedQuery, index);
       const campaignVariables = await handleCampaignVariables(index, spaceId);
       const customerData = await fetchCustomerData(index,mobileNumber)
-      const response = await generateResponse(llm,combinedQuery, relevantDocs, customerData, combinedConversations, campaignVariables);
+      const productLinks = await fetchProductLinks(index);
+      const response = await generateResponse(llm,combinedQuery, relevantDocs, customerData,productLinks, combinedConversations, campaignVariables);
       
       // Save the conversation
       await saveConversationToVecDb(llm,mobileNumber, combinedQuery, response, index);
@@ -345,7 +346,7 @@ export async function similaritySearch(query: string, index:any) {
         const queryEmbedding  = await embeddingModel.embedQuery(query)
         const queryResponse = await index.namespace("productdata").query({
             vector: queryEmbedding ,
-            topK: 3,
+            topK: 5,
             includeValues: true,
         });
 
@@ -454,7 +455,7 @@ export async function summarizeConversation(llm:any ,query: string, response: st
 }
 
 
-export async function generateResponse(llm:any ,query: string, context: string, customerData: string,history: string,campaignVariables:CampaignVariables): Promise<string> {
+export async function generateResponse(llm:any ,query: string, context: string, customerData: string,productLinks:any,history: string,campaignVariables:CampaignVariables): Promise<string> {
   try {
     
     const promptTemplate = ChatPromptTemplate.fromTemplate(chatTemplate.default);
