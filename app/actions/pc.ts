@@ -7,9 +7,15 @@ import { customFirstMessage } from "../api/campaign/route";
 import { error } from "console";
 
 
-export async function fetchIndex(spaceId: number) {
-  const indexName = `campaign${spaceId}`;
-  return pc.index(indexName);
+export async function fetchIndex(spaceId: number, namespace?: string) {
+    const indexName = "campaign" + spaceId;
+    const index = pc.index(indexName, `https://${indexName}-${process.env.PINECONE_URL}`);
+    
+    if (namespace) {
+        return index.namespace(namespace);
+    }
+    
+    return index;
 }
 
 export async function fetchInitialMessage(spaceId: number ) {
@@ -22,7 +28,7 @@ export async function fetchInitialMessage(spaceId: number ) {
         },
         topK: 1,
         includeMetadata: true,
-        vector: new Array(384).fill(0)
+        vector: new Array(768).fill(0)
       });
       
       let initialMessage : any
@@ -53,6 +59,7 @@ export async function fetchCustomerData(index: any, mobileNumber: string) {
     // Use the mobileNumber as the ID to fetch the exact vector
     const queryResult = await index.namespace("customerdata").fetch([mobileNumber]);
     const record = queryResult.records?.[mobileNumber];
+    console.log("record metadata: ",record?.metadata?.data)
     return record?.metadata?.data || "no data found";
   }
   catch(e)

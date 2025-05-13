@@ -4,9 +4,11 @@ import redis from "@/clients/redis";
 import prisma from "@/lib/db";
 import { addMessageToRedis,saveConversationToVecDb,generateResponse,handleCampaignVariables,similaritySearch,fetchEnhancedConversationHistory} from "@/lib/serverUtils";
 import { getLLM } from "@/clients/llm";
-import { fetchIndex } from "@/app/actions/pc";
+import { fetchCustomerData, fetchIndex } from "@/app/actions/pc";
 import { addConversation } from "@/app/actions/prisma";
 import { handleToolCall, parseToolCalls } from "@/lib/toolParser";
+import { savePersonalInfoToVecDb } from "@/lib/personalInfoStorage";
+import { detectPersonalInfo } from "@/lib/personalInfoDetector";
 
 const DEBOUNCE_SECONDS = 4;
 const REDIS_MESSAGE_PREFIX = 'whatsapp:pending:';
@@ -145,6 +147,14 @@ async function processAggregatedMessages(model:any , mobileNumber: string, space
       
       const messages = messageItems.map(item => JSON.parse(item).message);
       const combinedQuery = messages.join(" ");
+
+      const personalInfo = await detectPersonalInfo(combinedQuery);
+      if (personalInfo) {
+          // Store personal info in separate vector DB
+          const personalInfoIndex = await fetchIndex(spaceId, "customerdata"); 
+          await savePersonalInfoToVecDb(model, mobileNumber, personalInfo, personalInfoIndex);
+      }
+      
       await addConversation(spaceId,mobileNumber,combinedQuery,"USER")
       
       console.log(`Processing aggregated messages for ${mobileNumber}:`, combinedQuery);
@@ -159,7 +169,8 @@ async function processAggregatedMessages(model:any , mobileNumber: string, space
       console.log("fetched relevant docs")
       const campaignVariables = await handleCampaignVariables(index, spaceId);
       console.log("fetched campaign variables")
-      let response = await generateResponse(model,combinedQuery, relevantDocs, combinedConversations, campaignVariables);
+      const customerData = await fetchCustomerData(index,mobileNumber)
+      let response = await generateResponse(model,combinedQuery, relevantDocs, customerData, combinedConversations, campaignVariables);
       console.log("generated response")
       
       const toolCalls = parseToolCalls(response);

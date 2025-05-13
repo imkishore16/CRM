@@ -32,7 +32,7 @@ export async function POST(req:NextRequest){
         },
         topK: 1,
         includeMetadata: true,
-        vector: new Array(384).fill(0)
+        vector: new Array(768).fill(0)
       });
       
       // let initialMessage = "Hi"
@@ -60,7 +60,8 @@ export async function POST(req:NextRequest){
 
 export async function customFirstMessage(index:any,model:any ,mobileNumber: string,campaignVariables:CampaignVariables): Promise<string> {
   const customerData = await fetchCustomerData(index,mobileNumber)
-  const llmResponse = await generateResponse(model,"",customerData,"",campaignVariables)
+  console.log("customerData : ",customerData)
+  const llmResponse = await generateResponse(model,"","",customerData,"",campaignVariables)
   return llmResponse
 }
 
