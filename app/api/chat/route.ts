@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
         twilioClient.messages.create({
           body: response,
           from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
-          to: `whatsapp:${mobileNumber}`
+          to: `whatsapp:+91${mobileNumber}`
         })
       ]);
 
