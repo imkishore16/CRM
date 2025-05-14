@@ -60,6 +60,7 @@ export async function handleToolCall(toolCall: ToolCall, userId: string): Promis
 
 async function handleScheduleMeeting(params: Record<string, string>, userId: string): Promise<string> {
   const { date, time, duration = '30', description = '' } = params;
+  console.log(params)
   
   if (!date || !time) {
     throw new Error('Meeting scheduling requires date and time parameters');

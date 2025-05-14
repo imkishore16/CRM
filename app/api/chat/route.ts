@@ -199,66 +199,100 @@ export async function POST(req: NextRequest) {
         campaignVariables
       );
 
-      // Save conversation and send WhatsApp message in parallel
+      const toolCalls = parseToolCalls(response);
+
+//     for (const toolCall of toolCalls) {
+//     try {
+//         const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+//         const match = originalToolCallRegex.exec(response);
+        
+//         if (!match) {
+//             console.error(`Could not find original tool call for ${toolCall.tool} in response`);
+//             continue;
+//         }
+        
+//         const originalToolCallText = match[0];
+//         let toolResponse;
+
+//         if (toolCall.tool === 'save_customer_data' && toolCall.parameters.data) {
+//             // Add mobile number to the customer data
+//             const customerData = {
+//                 ...(typeof toolCall.parameters.data === 'object' ? toolCall.parameters.data : {}),
+//                 mobile_number: mobileNumber
+//             };
+//             const index = await fetchIndex(spaceId);
+//             toolResponse = await saveCustomerData(index, customerData);
+//             toolResponse = toolResponse ? 
+//                 "I've noted down your information. This helps me provide more personalized assistance." :
+//                 "I wasn't able to save your information at the moment, but I can still help you.";
+//         } else {
+//             toolResponse = await handleToolCall(toolCall, space?.userId?.toString() ?? "0");
+//         }
+        
+//         // Replace the exact original text
+//         response = response.replace(originalToolCallText, toolResponse);
+//     } catch (error) {
+//         console.error(`Error handling tool call ${toolCall.tool}:`, error);
+        
+//         const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+//         const match = originalToolCallRegex.exec(response);
+        
+//         if (match) {
+//             response = response.replace(
+//                 match[0],
+//                 toolCall.tool === 'save_customer_data' ?
+//                     "I wasn't able to save your information at the moment, but I can still help you." :
+//                     "Sorry, I couldn't schedule the meeting. Please try again."
+//             );
+//         }
+//     }
+// }
+
+        for (const toolCall of toolCalls) {
+            try {
+                const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+                const match = originalToolCallRegex.exec(response);
+
+                if (!match) {
+                    console.error(`Could not find original tool call for ${toolCall.tool} in response`);
+                    continue;
+                }
+
+                const space = await prisma.space.findFirst({
+                    where: { id: spaceId },
+                    select: { userId: true },
+                });
+
+                const originalToolCallText = match[0];
+                const toolResponse = await handleToolCall(toolCall, space?.userId?.toString() ?? "0");
+
+                // Replace the exact original text
+                response = response.replace(originalToolCallText, toolResponse);
+            } catch (error) {
+                console.error(`Error handling tool call ${toolCall.tool}:`, error);
+
+                const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+                const match = originalToolCallRegex.exec(response);
+
+                if (match) {
+                    response = response.replace(
+                        match[0],
+                        "Sorry, I couldn't schedule the meeting. Please try again."
+                    );
+                }
+            }
+        }
+         // Save conversation and send WhatsApp message in parallel
       await Promise.all([
         saveConversationToVecDb(llm, mobileNumber, query, response, realIndex),
         addConversation(spaceId, mobileNumber, response, "BOT"),
         twilioClient.messages.create({
-          body: response,
-          from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
-          to: `whatsapp:+91${mobileNumber}`
-        })
+            body: response,
+            from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
+            to: `whatsapp:+91${mobileNumber}`
+          })
       ]);
 
-
-      const toolCalls = parseToolCalls(response);
-
-    for (const toolCall of toolCalls) {
-    try {
-        const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
-        const match = originalToolCallRegex.exec(response);
-        
-        if (!match) {
-            console.error(`Could not find original tool call for ${toolCall.tool} in response`);
-            continue;
-        }
-        
-        const originalToolCallText = match[0];
-        let toolResponse;
-
-        if (toolCall.tool === 'save_customer_data' && toolCall.parameters.data) {
-            // Add mobile number to the customer data
-            const customerData = {
-                ...(typeof toolCall.parameters.data === 'object' ? toolCall.parameters.data : {}),
-                mobile_number: mobileNumber
-            };
-            const index = await fetchIndex(spaceId);
-            toolResponse = await saveCustomerData(index, customerData);
-            toolResponse = toolResponse ? 
-                "I've noted down your information. This helps me provide more personalized assistance." :
-                "I wasn't able to save your information at the moment, but I can still help you.";
-        } else {
-            toolResponse = await handleToolCall(toolCall, space?.userId?.toString() ?? "0");
-        }
-        
-        // Replace the exact original text
-        response = response.replace(originalToolCallText, toolResponse);
-    } catch (error) {
-        console.error(`Error handling tool call ${toolCall.tool}:`, error);
-        
-        const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
-        const match = originalToolCallRegex.exec(response);
-        
-        if (match) {
-            response = response.replace(
-                match[0],
-                toolCall.tool === 'save_customer_data' ?
-                    "I wasn't able to save your information at the moment, but I can still help you." :
-                    "Sorry, I couldn't schedule the meeting. Please try again."
-            );
-        }
-    }
-}
 
       return NextResponse.json({ message: response }, { status: 200 });
 
