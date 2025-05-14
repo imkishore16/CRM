@@ -125,7 +125,7 @@ async function parseFormEncodedBody(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
       const data = await parseFormEncodedBody(req); 
-      const mobileNumber = data.From?.replace("whatsapp:", ""); 
+      let mobileNumber = data.From?.replace("whatsapp:", "") || "";
       const query = data.Body;
 
       if (!query) {
@@ -135,10 +135,21 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
       }
 
+        // Remove the leading "+" if present
+        if (mobileNumber.startsWith("+")) {
+        mobileNumber = mobileNumber.substring(1);
+        }
+
+        // For Indian numbers specifically, remove the country code
+        if (mobileNumber.startsWith("91") && mobileNumber.length > 10) {
+        mobileNumber = mobileNumber.substring(2);
+        }
+      console.log("mobileNumber",mobileNumber)
       const spaceCustomer = await prisma.spaceCustomer.findFirst({
           where: { mobileNumber: mobileNumber },
           select: { spaceId: true },
       });
+      console.log("spaceCustomer",spaceCustomer)
       const spaceId = spaceCustomer?.spaceId ?? 0;
       
 
