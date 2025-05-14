@@ -135,51 +135,81 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "MobileNumber is required" }, { status: 400 });
       }
 
-        // Remove the leading "+" if present
         if (mobileNumber.startsWith("+")) {
         mobileNumber = mobileNumber.substring(1);
         }
 
-        // For Indian numbers specifically, remove the country code
         if (mobileNumber.startsWith("91") && mobileNumber.length > 10) {
         mobileNumber = mobileNumber.substring(2);
         }
       console.log("mobileNumber",mobileNumber)
-      const spaceCustomer = await prisma.spaceCustomer.findFirst({
+      const [spaceCustomer, index] = await Promise.all([
+        prisma.spaceCustomer.findFirst({
           where: { mobileNumber: mobileNumber },
           select: { spaceId: true },
-      });
+        }),
+        fetchIndex(0) // Using 0 as default since we don't have spaceId yet
+      ]);
       console.log("spaceCustomer",spaceCustomer)
       const spaceId = spaceCustomer?.spaceId ?? 0;
-      
+      const finalIndex = spaceId !== 0 ? await fetchIndex(spaceId) : index;
 
       await addConversation(spaceId, mobileNumber, query, "USER");
 
-      const space = await prisma.space.findFirst({
-          where: { id: spaceId },
-          select: { modelProvider: true ,userId: true},
-      });
+    //   const [space, realIndex] = await Promise.all([
+    //     prisma.space.findFirst({
+    //       where: { id: spaceId },
+    //       select: { modelProvider: true, userId: true },
+    //     }),
+    //     // Ensure we have the correct index
+    //     spaceId !== 0 && finalIndex.namespace !== `campaign-${spaceId}` ? fetchIndex(spaceId) : Promise.resolve(finalIndex)
+    //   ]);
+    const space = await prisma.space.findFirst({
+        where: { id: spaceId },
+        select: { modelProvider: true ,userId: true},
+    });
+    const realIndex = finalIndex;
       const llmProvider = space?.modelProvider ?? "gemini";
       const llm = getLLM(llmProvider);
 
-      const index = await fetchIndex(spaceId);
 
-      const pastConversations = await fetchEnhancedConversationHistory(query, mobileNumber, index, spaceId);
+      const [
+        pastConversations,
+        relevantDocs,
+        campaignVariables,
+        customerData,
+        productLinks
+      ] = await Promise.all([
+        fetchEnhancedConversationHistory(query, mobileNumber, realIndex, spaceId),
+        similaritySearch(query, realIndex),
+        handleCampaignVariables(realIndex, spaceId),
+        fetchCustomerData(realIndex, mobileNumber),
+        fetchProductLinks(realIndex)
+      ]);
+
       const combinedConversations = pastConversations.join("\n");
-      const relevantDocs = await similaritySearch(query, index);
-      const campaignVariables = await handleCampaignVariables(index, spaceId);
-      const customerData = await fetchCustomerData(index, mobileNumber);
-      const productLinks = await fetchProductLinks(index);
       // Generate and save response
-      let response = await generateResponse(llm, query, relevantDocs, customerData,productLinks, combinedConversations, campaignVariables);
-      await saveConversationToVecDb(llm, mobileNumber, query, response, index);
-      await addConversation(spaceId, mobileNumber, response, "BOT");
+      let response = await generateResponse(
+        llm, 
+        query, 
+        relevantDocs, 
+        customerData, 
+        productLinks, 
+        combinedConversations, 
+        campaignVariables
+      );
 
-      await twilioClient.messages.create({
+      // Save conversation and send WhatsApp message in parallel
+      await Promise.all([
+        saveConversationToVecDb(llm, mobileNumber, query, response, realIndex),
+        addConversation(spaceId, mobileNumber, response, "BOT"),
+        twilioClient.messages.create({
           body: response,
           from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
           to: `whatsapp:${mobileNumber}`
-      });
+        })
+      ]);
+
 
       const toolCalls = parseToolCalls(response);
 
