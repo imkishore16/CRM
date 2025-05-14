@@ -26,7 +26,7 @@ export default function HomeView() {
     const fetchSpaces = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/api/spaces`, {
+        const response = await fetch(`/api/spaces`, {
           method: "GET",
         })
 

@@ -1,5 +1,3 @@
-
-
 import pc from "@/clients/pinecone";
 import embeddingModel from "@/clients/embeddingModel";
 import prisma from "@/lib/db";
@@ -11,8 +9,8 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { chatTemplate } from "@/constants/chatTemplate";
 import { CampaignVariables } from "@/types";
 import { addConversation } from "@/app/actions/prisma";
-import { fetchIndex } from "@/app/actions/pc";
-
+import { fetchIndex, fetchProductLinks } from "@/app/actions/pc";
+import { fetchCustomerData } from "@/app/actions/pc";
 
 
 
@@ -52,6 +50,7 @@ export async function fetchEnhancedConversationHistory(query: string, mobileNumb
     console.log("fetched recent converstaions")
     const allConversations = [...recentConversations];
     
+    console.log("trying to fetch similar converstaions")
     const similarConversations = await fetchSimilarConversations(query, mobileNumber, index);
     console.log("fetched similar converstaions")
     
@@ -80,23 +79,27 @@ export async function fetchSimilarConversations(query:string , mobileNumber: str
     try {
       const stats = await index.describeIndexStats();
       if (stats.namespaces && stats.namespaces[mobileNumber]) {
-        console.log(`Namespace "${mobileNumber} exists".`);
+        console.log(`Namespace "${mobileNumber} exists".......`);
       } else {
         console.log(`Namespace "${mobileNumber}" does not exist in index ".`);
         return [];
       }
-      
-      const queryEmbedding = await embeddingModel.embedQuery(query)
-      const queryResponse = await index.namespace(mobileNumber).query({
-        vector:queryEmbedding,
-        topK: 10, 
-        includeMetadata: true,
-      });
+      console.log("embedding the query")
+      try {
+        const queryEmbedding = await embeddingModel.embedQuery(query)
+        
+        // console.log("queryEmbedding : ", queryEmbedding)
+        const queryResponse = await index.namespace(mobileNumber).query({
+          vector: queryEmbedding,
+          topK: 10,
+          includeMetadata: true,
+          
+        });
   
       if (!queryResponse.matches || queryResponse.matches.length === 0) {
         return [];
       }
-      
+      console.log("queryResponse : ", queryResponse)
       return queryResponse.matches
       .filter((match:any) => match.metadata)
       .map((match :any) => {
@@ -107,6 +110,14 @@ export async function fetchSimilarConversations(query:string , mobileNumber: str
           timestamp: metadata.timestamp || new Date().toISOString(),
         };
       });
+        
+      } catch (embeddingError) {
+        console.error("Error during embedding:", embeddingError);
+        throw embeddingError;
+      }
+      
+      
+      
 
     } catch (error) {
       console.error("Error fetching conversation history:", error);
@@ -131,7 +142,7 @@ export async function fetchRecentConversations(mobileNumber: string , limit : nu
       },
       take: limit*2
     });
-    console.log("fetched recent messages" , recentMessages)
+    console.log("fetched recent messages successfully")
     
     const conversations: {
       query: string;
@@ -162,7 +173,7 @@ export async function fetchRecentConversations(mobileNumber: string , limit : nu
         queryTimestamp = null;
       }
     }
-    console.log("fetched recent messages" , conversations)
+    console.log("combined recent messages successfully")
 
     return conversations.reverse(); 
     
@@ -222,7 +233,9 @@ export async function processAggregatedMessages(llm:any , mobileNumber: string, 
       const combinedConversations = pastConversations.join("\n");
       const relevantDocs = await similaritySearch(combinedQuery, index);
       const campaignVariables = await handleCampaignVariables(index, spaceId);
-      const response = await generateResponse(llm,combinedQuery, relevantDocs, combinedConversations, campaignVariables);
+      const customerData = await fetchCustomerData(index,mobileNumber)
+      const productLinks = await fetchProductLinks(index);
+      const response = await generateResponse(llm,combinedQuery, relevantDocs, customerData,productLinks, combinedConversations, campaignVariables);
       
       // Save the conversation
       await saveConversationToVecDb(llm,mobileNumber, combinedQuery, response, index);
@@ -249,7 +262,7 @@ export async function processAggregatedMessages(llm:any , mobileNumber: string, 
 
 export async function fetchCampaignDataFromVectorDB(index: any, spaceId: number): Promise<CampaignVariables> {
   try {
-    const dummyVector = new Array(384).fill(0);
+    const dummyVector = new Array(768).fill(0);
     
     const campaignData: CampaignVariables = {
       campaignName: "",
@@ -333,7 +346,7 @@ export async function similaritySearch(query: string, index:any) {
         const queryEmbedding  = await embeddingModel.embedQuery(query)
         const queryResponse = await index.namespace("productdata").query({
             vector: queryEmbedding ,
-            topK: 3,
+            topK: 5,
             includeValues: true,
         });
 
@@ -442,19 +455,20 @@ export async function summarizeConversation(llm:any ,query: string, response: st
 }
 
 
-export async function generateResponse(llm:any ,query: string, context: string, history: string,campaignVariables:CampaignVariables): Promise<string> {
+export async function generateResponse(llm:any ,query: string, context: string, customerData: string,productLinks:any,history: string,campaignVariables:CampaignVariables): Promise<string> {
   try {
     
     const promptTemplate = ChatPromptTemplate.fromTemplate(chatTemplate.default);
 
     const chain = promptTemplate.pipe(llm).pipe(new StringOutputParser());
-    
-    const isFirstConversation = !history || history.trim() === '' || history.length==0 
-    
+    console.log("history : ", history)
+    const isFirstConversation = !history  || history.length==0 || history.trim() === ''
+    console.log("campaignVariables : ",campaignVariables)
     const response = await chain.invoke({
       query,
       history, 
       context,
+      customerData,
       ...campaignVariables,
       initialMessage: isFirstConversation ? campaignVariables.initialMessage : "",
       followUpMessage: !isFirstConversation ? campaignVariables.followUpMessage : ""

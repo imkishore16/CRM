@@ -20,6 +20,10 @@ model User {
   provider         Provider
   id               Int      @id @default(autoincrement())
   createdSpaces    Space[]  @relation("createdBy")
+  googleAccessToken  String?
+  googleRefreshToken String?
+  googleTokenExpiry  DateTime?
+  meetings           Meeting[]
 }
 
 model Space {
@@ -84,4 +88,18 @@ enum Provider {
   Google
   Credentials
   Spotify
+}
+
+model Meeting {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  eventId     String   @unique
+  startTime   DateTime
+  endTime     DateTime
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }

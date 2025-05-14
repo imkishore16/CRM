@@ -116,7 +116,7 @@ export default function SetTargetCustomersForm() {
       const namespace = "customerdata"
       const response = await fetch(`/api/embed?spaceId=${spaceId}&namespace=${namespace}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // headers: { "Content-Type": "application/json" },
         body: formData,
       })
 
@@ -129,7 +129,7 @@ export default function SetTargetCustomersForm() {
         setRows([{ id: crypto.randomUUID(), mobile: "", text: "" }])
 
         // Refresh customer data after successful submission
-        const res = await fetch(`${process.env.NEXTAUTH_URL}/api/customers?spaceId=${spaceId}`, {
+        const res = await fetch(`/api/customers?spaceId=${spaceId}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         })

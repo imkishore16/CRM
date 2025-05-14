@@ -1,15 +1,13 @@
-
 "use client"
 
-import { useState, use, useRef ,useEffect} from "react"
+import { useState, use, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, PlayCircle, MessageSquare, X, Send, ChevronRight, ChevronLeft } from "lucide-react"
+import { Loader2, PlayCircle, MessageSquare, X, Send, ChevronRight, ChevronLeft, GripVertical } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { addConversation,fetchConversationHistory,fetchModelProvider } from "@/app/actions/prisma"
-import {getCustomInitialMessage ,fetchCustomerData} from "@/app/actions/pc"
-
+import { addConversation, fetchConversationHistory, fetchModelProvider } from "@/app/actions/prisma"
+import { getCustomInitialMessage, fetchCustomerData } from "@/app/actions/pc"
 
 interface CampaignPageProps {
   params: Promise<{ spaceId: string }>
@@ -19,6 +17,106 @@ interface Message {
   id: number
   content: string
   sender: "USER" | "BOT"
+  timestamp?: Date
+}
+
+// Add ResizablePanel type
+interface ResizablePanelProps {
+  children: React.ReactNode;
+  defaultWidth: number;
+  minWidth: number;
+  maxWidth: number;
+}
+
+// Add ResizablePanel component
+function ResizablePanel({ children, defaultWidth, minWidth, maxWidth }: ResizablePanelProps) {
+  const [width, setWidth] = useState(defaultWidth);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      
+      const newWidth = window.innerWidth - e.clientX;
+      setWidth(Math.min(Math.max(newWidth, minWidth), maxWidth));
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, minWidth, maxWidth]);
+
+  return (
+    <div style={{ width }} className="relative">
+      <div
+        ref={dragRef}
+        className="absolute left-0 top-0 h-full w-1 cursor-ew-resize group"
+        onMouseDown={() => setIsDragging(true)}
+      >
+        <div className="absolute left-0 top-1/2 -translate-x-full -translate-y-1/2 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// Add AutoResizeTextarea component
+function AutoResizeTextarea({ 
+  value, 
+  onChange, 
+  onKeyDown,
+  placeholder,
+  disabled
+}: { 
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 150) + 'px';
+    }
+  }, [value]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      value={value}
+      onChange={onChange}
+      onKeyDown={onKeyDown}
+      placeholder={placeholder}
+      disabled={disabled}
+      rows={1}
+      className="flex-1 rounded-md border border-border/80 px-3 py-2 text-sm bg-background focus:border-black focus:outline-none focus:ring-1 focus:ring-black resize-none min-h-[40px] max-h-[150px]"
+    />
+  );
+}
+
+// Add formatTime helper function
+function formatTime(date: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  }).format(date);
 }
 
 export default function CampaignPage({ params }: CampaignPageProps) {
@@ -124,61 +222,76 @@ export default function CampaignPage({ params }: CampaignPageProps) {
   }
 
   const handleSendMessage = async () => {
-    if (!input.trim()) return
+    if (!input.trim()) return;
 
     const userMessage: Message = {
       id: messages.length + 1,
       content: input,
       sender: "USER",
-    }
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setIsChatLoading(true)
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsChatLoading(true);
 
     // Scroll to bottom
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-    }, 100)
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
 
     try {
+      const requestBody = {
+        query: input,
+        mobileNumber: spaceId,
+      };
+
       const response = await fetch(`/api/sampleChat/?spaceId=${spaceId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({query:input,mobileNumber:spaceId})
-      })
-      if (response.ok) {
-        const data = await response.json()
-        // Only add bot message if there's actual content
-        if (data.message && data.message.length > 0) {
-          const botMessage: Message = {
-            id: messages.length + 2,
-            content: data.message,
-            sender: "BOT",
-          }
-          setMessages((prev) => [...prev, botMessage])
-        }
-      } else {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to send message")
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to send message");
+      }
+
+      const data = await response.json();
+      if (data.message) {
+        const botMessage: Message = {
+          id: messages.length + 2,
+          content: typeof data.message === 'string' ? data.message : data.message.message,
+          sender: "BOT",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, botMessage]);
       }
     } catch (error) {
-      console.error("Error in chat:", error)
+      console.error("Error in chat:", error);
       toast({
         title: "Chat Error",
         description: "Failed to get a response. Please try again.",
         variant: "destructive",
-      })
+      });
+
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        content: "I apologize, but I encountered an error. Please try again.",
+        sender: "BOT",
+        timestamp: new Date()
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setIsChatLoading(false)
+      setIsChatLoading(false);
 
       // Scroll to bottom again after response
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-      }, 100)
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     }
-  }
+  };
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
@@ -255,22 +368,9 @@ export default function CampaignPage({ params }: CampaignPageProps) {
       </div>
 
       {/* Chat panel */}
-      <div
-        className={cn(
-          "fixed top-16 bottom-0 right-0 bg-background border-l border-border transition-all duration-300 flex flex-col",
-          chatExpanded ? "w-[400px]" : "w-[50px]",
-        )}
-      >
-        {/* Toggle button */}
-        <button
-          onClick={() => setChatExpanded(!chatExpanded)}
-          className="absolute -left-10 top-4 bg-black text-white p-2 rounded-l-md hover:bg-gray-800"
-        >
-          {chatExpanded ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-        </button>
-
-        {chatExpanded ? (
-          <>
+      {chatExpanded && (
+        <ResizablePanel defaultWidth={400} minWidth={300} maxWidth={800}>
+          <div className="fixed top-16 bottom-0 right-0 bg-background border-l border-border flex flex-col h-[calc(100vh-4rem)] ml-[240px]">
             {/* Chat header */}
             <div className="border-b border-border p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -289,30 +389,82 @@ export default function CampaignPage({ params }: CampaignPageProps) {
             </div>
 
             {/* Chat messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn("flex", message.sender === "USER" ? "justify-end" : "justify-start")}
-                >
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#efeae2] dark:bg-gray-900">
+              {messages.map((message, index) => {
+                const isFirstInGroup = index === 0 || messages[index - 1].sender !== message.sender;
+                const isLastInGroup = index === messages.length - 1 || messages[index + 1].sender !== message.sender;
+                
+                return (
                   <div
+                    key={message.id}
                     className={cn(
-                      "max-w-[80%] rounded-lg p-3",
-                      message.sender === "USER" ? "bg-black text-white" : "bg-gray-100 text-gray-800",
+                      "flex",
+                      message.sender === "USER" ? "justify-end" : "justify-start",
+                      !isLastInGroup && "mb-1"
                     )}
                   >
-                    {message.content}
+                    <div
+                      className={cn(
+                        "max-w-[45%] relative group",
+                        message.sender === "USER" ? "items-end" : "items-start"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "relative px-3 py-2 rounded-lg break-words",
+                          message.sender === "USER" 
+                            ? "bg-[#d9fdd3] dark:bg-green-700 ml-8 rounded-tr-none"
+                            : "bg-white dark:bg-gray-800 mr-8 rounded-tl-none",
+                          !isLastInGroup && (message.sender === "USER" ? "rounded-br-lg" : "rounded-bl-lg")
+                        )}
+                      >
+                        {/* Message content */}
+                        <div className="relative whitespace-pre-wrap text-[15px] leading-[20px]">
+                          {message.content}
+                          {/* Timestamp */}
+                          <div 
+                            className={cn(
+                              "text-[11px] text-gray-500 dark:text-gray-400 leading-none mt-1 ml-1 inline-block float-right pl-2 min-w-[65px]",
+                              message.sender === "USER" ? "text-[#667781]" : "text-[#667781]"
+                            )}
+                          >
+                            {message.timestamp ? formatTime(message.timestamp) : ''}
+                          </div>
+                        </div>
+                        {/* Message tail */}
+                        <div
+                          className={cn(
+                            "absolute top-0 w-2 h-2 overflow-hidden",
+                            message.sender === "USER" 
+                              ? "right-[-6px] [mask-image:url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iOHB4IiBoZWlnaHQ9IjEzcHgiIHZpZXdCb3g9IjAgMCA4IDEzIiB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPgogICAgPCEtLSBHZW5lcmF0b3I6IFNrZXRjaCA0MC4zICgzMzgzOSkgLSBodHRwOi8vd3d3LmJvaGVtaWFuY29kaW5nLmNvbS9za2V0Y2ggLS0+CiAgICA8dGl0bGU+dGFpbC1yaWdodDwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPjwvZGVmcz4KICAgIDxnIGlkPSJQYWdlLTEiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxnIGlkPSJ0YWlsLXJpZ2h0IiBmaWxsPSIjZDlmZGQzIj4KICAgICAgICAgICAgPHBhdGggZD0iTTAsMS45OTk5OTk5NiBDMCwxLjk5OTk5OTk2IDIsMS45OTk5OTk5NiAzLjUsMy40OTk5OTk5NiBDNSw0Ljk5OTk5OTk2IDYsMTAgNiwxMCBDNiwxMCA2LDQuOTk5OTk5OTYgNy41LDMuNDk5OTk5OTYgQzksMi4wMDAwMDAwNiAxMCwyLjAwMDAwMDA2IDEwLDIuMDAwMDAwMDYgTDEwLDAgTDAsMCBMMCwxLjk5OTk5OTk2IFoiIGlkPSJQYXRoLTExNyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNS4wMDAwMDAsIDUuMDAwMDAwKSByb3RhdGUoLTkwLjAwMDAwMCkgdHJhbnNsYXRlKC01LjAwMDAwMCwgLTUuMDAwMDAwKSAiPjwvcGF0aD4KICAgICAgICA8L2c+CiAgICA8L2c+Cjwvc3ZnPg==')]"
+                              : "left-[-6px] [mask-image:url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iOHB4IiBoZWlnaHQ9IjEzcHgiIHZpZXdCb3g9IjAgMCA4IDEzIiB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPgogICAgPCEtLSBHZW5lcmF0b3I6IFNrZXRjaCA0MC4zICgzMzgzOSkgLSBodHRwOi8vd3d3LmJvaGVtaWFuY29kaW5nLmNvbS9za2V0Y2ggLS0+CiAgICA8dGl0bGU+dGFpbC1sZWZ0PC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+PC9kZWZzPgogICAgPGcgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPGcgaWQ9InRhaWwtbGVmdCIgZmlsbD0iI2ZmZmZmZiI+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0wLDEuOTk5OTk5OTYgQzAsMS45OTk5OTk5NiAyLDEuOTk5OTk5OTYgMy41LDMuNDk5OTk5OTYgQzUsNC45OTk5OTk5NiA2LDEwIDYsMTAgQzYsMTAgNiw0Ljk5OTk5OTk2IDcuNSwzLjQ5OTk5OTk2IEM5LDIuMDAwMDAwMDYgMTAsMi4wMDAwMDAwNiAxMCwyLjAwMDAwMDA2IEwxMCwwIEwwLDAgTDAsMS45OTk5OTk5NiBaIiBpZD0iUGF0aC0xMTciIHRyYW5zZm9ybT0idHJhbnNsYXRlKDUuMDAwMDAwLCA1LjAwMDAwMCkgc2NhbGUoLTEsIDEpIHJvdGF0ZSgtOTAuMDAwMDAwKSB0cmFuc2xhdGUoLTUuMDAwMDAwLCAtNS4wMDAwMDApICI+PC9wYXRoPgogICAgICAgIDwvZz4KICAgIDwvZz4KPC9zdmc+')]"
+                          )}
+                        >
+                          <div 
+                            className={cn(
+                              "w-full h-full",
+                              message.sender === "USER" 
+                                ? "bg-[#d9fdd3] dark:bg-green-700" 
+                                : "bg-white dark:bg-gray-800"
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {isChatLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 text-gray-800 p-3 rounded-lg">
+                  <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-3 rounded-lg max-w-[45%] relative rounded-tl-none">
                     <div className="flex space-x-2">
                       <div className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.3s]"></div>
                       <div className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]"></div>
                       <div className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"></div>
+                    </div>
+                    <div className="absolute left-[-6px] top-0 w-2 h-2 overflow-hidden [mask-image:url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iOHB4IiBoZWlnaHQ9IjEzcHgiIHZpZXdCb3g9IjAgMCA4IDEzIiB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPgogICAgPCEtLSBHZW5lcmF0b3I6IFNrZXRjaCA0MC4zICgzMzgzOSkgLSBodHRwOi8vd3d3LmJvaGVtaWFuY29kaW5nLmNvbS9za2V0Y2ggLS0+CiAgICA8dGl0bGU+dGFpbC1sZWZ0PC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+PC9kZWZzPgogICAgPGcgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPGcgaWQ9InRhaWwtbGVmdCIgZmlsbD0iI2ZmZmZmZiI+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0wLDEuOTk5OTk5OTYgQzAsMS45OTk5OTk5NiAyLDEuOTk5OTk5OTYgMy41LDMuNDk5OTk5OTYgQzUsNC45OTk5OTk5NiA2LDEwIDYsMTAgQzYsMTAgNiw0Ljk5OTk5OTk2IDcuNSwzLjQ5OTk5OTk2IEM5LDIuMDAwMDAwMDYgMTAsMi4wMDAwMDAwNiAxMCwyLjAwMDAwMDA2IEwxMCwwIEwwLDAgTDAsMS45OTk5OTk5NiBaIiBpZD0iUGF0aC0xMTciIHRyYW5zZm9ybT0idHJhbnNsYXRlKDUuMDAwMDAwLCA1LjAwMDAwMCkgc2NhbGUoLTEsIDEpIHJvdGF0ZSgtOTAuMDAwMDAwKSB0cmFuc2xhdGUoLTUuMDAwMDAwLCAtNS4wMDAwMDApICI+PC9wYXRoPgogICAgICAgIDwvZz4KICAgIDwvZz4KPC9zdmc+')]">
+                      <div className="w-full h-full bg-white dark:bg-gray-800" />
                     </div>
                   </div>
                 </div>
@@ -322,34 +474,42 @@ export default function CampaignPage({ params }: CampaignPageProps) {
             </div>
 
             {/* Chat input */}
-            <div className="border-t border-border p-4">
+            <div className="border-t border-border/50 bg-background p-4">
               <div className="flex gap-2">
-                <input
-                  type="text"
+                <AutoResizeTextarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                  placeholder="Type your message..."
-                  className="flex-1 rounded-md border border-border/80 px-3 py-2 text-sm bg-background focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-                  // disabled={isChatLoading}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  placeholder="Type a message"
+                  disabled={isChatLoading}
                 />
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!input.trim()}
-                  className="bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors"
+                  disabled={!input.trim() || isChatLoading}
+                  className="bg-black text-white hover:bg-background hover:text-black hover:border-black border border-transparent transition-colors self-end h-10 px-4"
                 >
                   <Send className="h-4 w-4" />
                   <span className="sr-only">Send</span>
                 </Button>
               </div>
             </div>
-          </>
-        ) : (
-          <div className="h-full flex items-center justify-center">
-            <MessageSquare className="h-5 w-5 text-muted-foreground/60" />
           </div>
-        )}
-      </div>
+        </ResizablePanel>
+      )}
+
+      {!chatExpanded && (
+        <button
+          onClick={() => setChatExpanded(true)}
+          className="fixed top-20 right-0 bg-black text-white p-2 rounded-l-md hover:bg-gray-800 ml-[240px]"
+        >
+          <MessageSquare className="h-5 w-5" />
+        </button>
+      )}
     </div>
   )
 }

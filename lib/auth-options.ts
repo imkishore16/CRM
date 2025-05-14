@@ -19,6 +19,13 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
       httpOptions: {
         timeout: 60000,
+      },
+      authorization: {
+        params: {
+          scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events profile email',
+          access_type: 'offline',
+          prompt: 'consent',
+        }
       }
     }),
     CredentialsProvider({
@@ -113,22 +120,39 @@ export const authOptions: NextAuthOptions = {
     async signIn({ account, profile }) {
       try {
         if (account?.provider === "google" ) {
-          const user = await prisma.user.findUnique({
-            where: {
+          // const user = await prisma.user.findUnique({
+          //   where: {
+          //     email: profile?.email!,
+          //   }
+          // });
+
+          // if (!user) {
+          //   await prisma.user.create({
+          //     data: {
+          //       email: profile?.email!,
+          //       name: profile?.name || undefined,
+          //       provider: account?.provider === "google" ? "Google": "Spotify",
+          //     }
+          //   });
+          // }
+          await prisma.user.upsert({
+            where: { email: profile?.email },
+            update: {
+              googleAccessToken: account.access_token,
+              googleRefreshToken: account.refresh_token,
+              googleTokenExpiry: new Date(account.expires_at! * 1000)
+            },
+            create: {
               email: profile?.email!,
+              name: profile?.name,
+              googleAccessToken: account.access_token,
+              googleRefreshToken: account.refresh_token,
+              googleTokenExpiry: new Date(account.expires_at! * 1000),
+              provider: account?.provider === "google" ? "Google": "Spotify",
             }
           });
-
-          if (!user) {
-            await prisma.user.create({
-              data: {
-                email: profile?.email!,
-                name: profile?.name || undefined,
-                provider: account?.provider === "google" ? "Google": "Spotify",
-              }
-            });
-          }
         }
+        
         return true;
       } catch (error) {
         return false;

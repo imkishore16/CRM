@@ -71,7 +71,7 @@
 //         // }, DEBOUNCE_SECONDS * 1000);
 //         const space = await prisma.space.findFirst({
 //           where: { id: spaceId },
-//           select: { modelProvider: true },  
+//           select: { modelProvider: true ,userId: true},
 //         });
       
 //         const llmKey = `${spaceId}:llm`;
@@ -107,7 +107,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import twilioClient from "@/clients/twilioClient";
 import { getLLM } from "@/clients/llm";
-import { fetchIndex } from "@/app/actions/pc";
+import { fetchCustomerData, fetchIndex, fetchProductLinks, saveCustomerData } from "@/app/actions/pc";
 import { 
   fetchEnhancedConversationHistory, 
   saveConversationToVecDb, 
@@ -116,6 +116,7 @@ import {
   handleCampaignVariables
 } from "@/lib/serverUtils";
 import { addConversation } from "@/app/actions/prisma";
+import { parseToolCalls, handleToolCall } from '@/lib/toolParser';
 
 async function parseFormEncodedBody(req: NextRequest) {
   const rawBody = await req.text(); 
@@ -139,12 +140,13 @@ export async function POST(req: NextRequest) {
           select: { spaceId: true },
       });
       const spaceId = spaceCustomer?.spaceId ?? 0;
+      
 
       await addConversation(spaceId, mobileNumber, query, "USER");
 
       const space = await prisma.space.findFirst({
           where: { id: spaceId },
-          select: { modelProvider: true },
+          select: { modelProvider: true ,userId: true},
       });
       const llmProvider = space?.modelProvider ?? "gemini";
       const llm = getLLM(llmProvider);
@@ -155,9 +157,10 @@ export async function POST(req: NextRequest) {
       const combinedConversations = pastConversations.join("\n");
       const relevantDocs = await similaritySearch(query, index);
       const campaignVariables = await handleCampaignVariables(index, spaceId);
-      
+      const customerData = await fetchCustomerData(index, mobileNumber);
+      const productLinks = await fetchProductLinks(index);
       // Generate and save response
-      const response = await generateResponse(llm, query, relevantDocs, combinedConversations, campaignVariables);
+      let response = await generateResponse(llm, query, relevantDocs, customerData,productLinks, combinedConversations, campaignVariables);
       await saveConversationToVecDb(llm, mobileNumber, query, response, index);
       await addConversation(spaceId, mobileNumber, response, "BOT");
 
@@ -166,6 +169,55 @@ export async function POST(req: NextRequest) {
           from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
           to: `whatsapp:${mobileNumber}`
       });
+
+      const toolCalls = parseToolCalls(response);
+
+    for (const toolCall of toolCalls) {
+    try {
+        const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+        const match = originalToolCallRegex.exec(response);
+        
+        if (!match) {
+            console.error(`Could not find original tool call for ${toolCall.tool} in response`);
+            continue;
+        }
+        
+        const originalToolCallText = match[0];
+        let toolResponse;
+
+        if (toolCall.tool === 'save_customer_data' && toolCall.parameters.data) {
+            // Add mobile number to the customer data
+            const customerData = {
+                ...(typeof toolCall.parameters.data === 'object' ? toolCall.parameters.data : {}),
+                mobile_number: mobileNumber
+            };
+            const index = await fetchIndex(spaceId);
+            toolResponse = await saveCustomerData(index, customerData);
+            toolResponse = toolResponse ? 
+                "I've noted down your information. This helps me provide more personalized assistance." :
+                "I wasn't able to save your information at the moment, but I can still help you.";
+        } else {
+            toolResponse = await handleToolCall(toolCall, space?.userId?.toString() ?? "0");
+        }
+        
+        // Replace the exact original text
+        response = response.replace(originalToolCallText, toolResponse);
+    } catch (error) {
+        console.error(`Error handling tool call ${toolCall.tool}:`, error);
+        
+        const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
+        const match = originalToolCallRegex.exec(response);
+        
+        if (match) {
+            response = response.replace(
+                match[0],
+                toolCall.tool === 'save_customer_data' ?
+                    "I wasn't able to save your information at the moment, but I can still help you." :
+                    "Sorry, I couldn't schedule the meeting. Please try again."
+            );
+        }
+    }
+}
 
       return NextResponse.json({ message: response }, { status: 200 });
 

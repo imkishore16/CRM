@@ -16,3 +16,12 @@ write an api to send the initial message , ie a get
 try changing the chat api to get itself 
 
 Change promttemplate
+
+
+1)Meeting dedscription
+2)Meeting remisder to customer and user/campagin Manger
+3)Context of available meetings
+4)Store the meeting id of a customer in their own index (ie 9445422734 index will have personal ddata and meeting information , ie id and timings and date and description)
+5)reschedule and  cancel a meeting options
+
+1) ask if that customer is the right person ?
