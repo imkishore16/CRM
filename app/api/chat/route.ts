@@ -71,7 +71,7 @@
 //         // }, DEBOUNCE_SECONDS * 1000);
 //         const space = await prisma.space.findFirst({
 //           where: { id: spaceId },
-//           select: { modelProvider: true },  
+//           select: { modelProvider: true ,userId: true},
 //         });
       
 //         const llmKey = `${spaceId}:llm`;
@@ -107,7 +107,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import twilioClient from "@/clients/twilioClient";
 import { getLLM } from "@/clients/llm";
-import { fetchCustomerData, fetchIndex, fetchProductLinks } from "@/app/actions/pc";
+import { fetchCustomerData, fetchIndex, fetchProductLinks, saveCustomerData } from "@/app/actions/pc";
 import { 
   fetchEnhancedConversationHistory, 
   saveConversationToVecDb, 
@@ -174,7 +174,6 @@ export async function POST(req: NextRequest) {
 
     for (const toolCall of toolCalls) {
     try {
-        // Store the original matched tool call text
         const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
         const match = originalToolCallRegex.exec(response);
         
@@ -184,21 +183,37 @@ export async function POST(req: NextRequest) {
         }
         
         const originalToolCallText = match[0];
-        const toolResponse = await handleToolCall(toolCall, space?.userId?.toString() ?? "0");
+        let toolResponse;
+
+        if (toolCall.tool === 'save_customer_data' && toolCall.parameters.data) {
+            // Add mobile number to the customer data
+            const customerData = {
+                ...(typeof toolCall.parameters.data === 'object' ? toolCall.parameters.data : {}),
+                mobile_number: mobileNumber
+            };
+            const index = await fetchIndex(spaceId);
+            toolResponse = await saveCustomerData(index, customerData);
+            toolResponse = toolResponse ? 
+                "I've noted down your information. This helps me provide more personalized assistance." :
+                "I wasn't able to save your information at the moment, but I can still help you.";
+        } else {
+            toolResponse = await handleToolCall(toolCall, space?.userId?.toString() ?? "0");
+        }
         
         // Replace the exact original text
         response = response.replace(originalToolCallText, toolResponse);
     } catch (error) {
         console.error(`Error handling tool call ${toolCall.tool}:`, error);
         
-        // Find and replace the original tool call text
         const originalToolCallRegex = new RegExp(`\\[TOOL_CALL:\\s*${toolCall.tool}\\(.*?\\)\\]`);
         const match = originalToolCallRegex.exec(response);
         
         if (match) {
             response = response.replace(
                 match[0],
-                "Sorry, I couldn't schedule the meeting. Please try again."
+                toolCall.tool === 'save_customer_data' ?
+                    "I wasn't able to save your information at the moment, but I can still help you." :
+                    "Sorry, I couldn't schedule the meeting. Please try again."
             );
         }
     }

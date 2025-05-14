@@ -18,15 +18,6 @@ interface Message {
   content: string
   sender: "USER" | "BOT"
   timestamp?: Date
-  context?: {
-    type: "CONFIRMATION" | "SCHEDULING" | "RESCHEDULING" | "CANCELLATION" | "GENERAL"
-    data?: {
-      date?: string
-      time?: string
-      eventId?: string
-      action?: string
-    }
-  }
 }
 
 // Add ResizablePanel type
@@ -140,7 +131,6 @@ export default function CampaignPage({ params }: CampaignPageProps) {
   const [input, setInput] = useState<string>("")
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [lastContext, setLastContext] = useState<Message["context"] | undefined>(undefined);
 
   useEffect(() => {
     const loadConversationHistory = async () => {
@@ -231,28 +221,6 @@ export default function CampaignPage({ params }: CampaignPageProps) {
     }
   }
 
-  // Helper function to detect affirmative/negative responses
-  const isAffirmativeResponse = (text: string): boolean => {
-    const affirmativeWords = [
-      'yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'alright', 'fine',
-      'good', 'great', 'perfect', 'cool', 'definitely', 'absolutely',
-      'confirmed', 'correct', 'right', 'sounds good', 'that works'
-    ];
-    return affirmativeWords.some(word => 
-      text.toLowerCase().includes(word.toLowerCase())
-    );
-  };
-
-  const isNegativeResponse = (text: string): boolean => {
-    const negativeWords = [
-      'no', 'nope', 'nah', 'not', 'dont', "don't", 'cancel',
-      'wrong', 'incorrect', 'reschedule', 'change', 'different'
-    ];
-    return negativeWords.some(word => 
-      text.toLowerCase().includes(word.toLowerCase())
-    );
-  };
-
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
@@ -272,42 +240,33 @@ export default function CampaignPage({ params }: CampaignPageProps) {
     }, 100);
 
     try {
-      // If the user's message is short and we have context, include it in the API call
-      const contextualInput = input.split(' ').length <= 3 && lastContext 
-        ? {
-            query: input,
-            mobileNumber: spaceId,
-            context: lastContext
-          }
-        : {
-            query: input,
-            mobileNumber: spaceId
-          };
+      const requestBody = {
+        query: input,
+        mobileNumber: spaceId,
+      };
 
       const response = await fetch(`/api/sampleChat/?spaceId=${spaceId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(contextualInput)
+        body: JSON.stringify(requestBody)
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.message && data.message.length > 0) {
-          const botMessage: Message = {
-            id: messages.length + 2,
-            content: data.message,
-            sender: "BOT",
-            timestamp: new Date(),
-            context: data.context // Store the new context from the response
-          };
-          setMessages((prev) => [...prev, botMessage]);
-          setLastContext(data.context); // Update the last context
-        }
-      } else {
+      if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to send message");
+      }
+
+      const data = await response.json();
+      if (data.message) {
+        const botMessage: Message = {
+          id: messages.length + 2,
+          content: typeof data.message === 'string' ? data.message : data.message.message,
+          sender: "BOT",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, botMessage]);
       }
     } catch (error) {
       console.error("Error in chat:", error);
@@ -316,6 +275,14 @@ export default function CampaignPage({ params }: CampaignPageProps) {
         description: "Failed to get a response. Please try again.",
         variant: "destructive",
       });
+
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        content: "I apologize, but I encountered an error. Please try again.",
+        sender: "BOT",
+        timestamp: new Date()
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsChatLoading(false);
 

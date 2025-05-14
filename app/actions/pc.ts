@@ -61,7 +61,7 @@ export async function fetchCustomerData(index: any, mobileNumber: string) {
     // Use the mobileNumber as the ID to fetch the exact vector
     const queryResult = await index.namespace("customerdata").fetch([mobileNumber]);
     const record = queryResult.records?.[mobileNumber];
-    console.log("record metadata: ",record?.metadata?.data)
+    console.log("customer data metadata: ",record?.metadata?.data)
     return record?.metadata?.data || "no data found";
   }
   catch(e)
@@ -138,14 +138,8 @@ export async function saveCustomerData(index: any, data: CustomerData) {
     };
 
     // Create a string representation of the data for embedding
-    const dataString = Object.entries(enrichedData)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: ${value.join(", ")}`;
-        }
-        return `${key}: ${value}`;
-      })
-      .join("\n");
+    // Avoid using "key: value" format that might be interpreted as template literals
+    const dataString = JSON.stringify(enrichedData, null, 2);
 
     // Get embeddings for the customer data
     const embedding = await embeddingModel.embedQuery(dataString);
