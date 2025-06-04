@@ -31,7 +31,6 @@ export async function getCalendarClient(userId: string) {
     });
   }
 
-  // Create calendar client
   const auth = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET
@@ -90,6 +89,8 @@ export async function scheduleMeeting(
   
   const startDateTime = new Date(`${date}T${time}`);
   const endDateTime = new Date(startDateTime.getTime() + parseInt(duration) * 60000);
+  console.log(startDateTime)
+  console.log(endDateTime)
 
   const event = {
     summary: 'Meeting from WhatsApp Chat',
@@ -247,5 +248,120 @@ export async function getLatestMeeting(userId: string) {
   } catch (error) {
     console.error('Error getting latest meeting:', error);
     return null;
+  }
+}
+
+// export async function getFutureMeetings(userId: string) {
+//   const calendar = await getCalendarClient(userId);
+//   const now = new Date();
+
+//   try {
+//     const response = await calendar.events.list({
+//       calendarId: 'primary',
+//       timeMin: now.toISOString(),
+//       singleEvents: true,
+//       orderBy: 'startTime',
+//       maxResults: 10, // Limit to next 10 meetings
+//     });
+
+//     if (!response.data.items) {
+//       return [];
+//     }
+
+//     return response.data.items.map(event => ({
+//       id: event.id,
+//       summary: event.summary,
+//       description: event.description,
+//       startTime: event.start?.dateTime || event.start?.date,
+//       endTime: event.end?.dateTime || event.end?.date,
+//       htmlLink: event.htmlLink,
+//       status: event.status
+//     }));
+//   } catch (error) {
+//     console.error('Error fetching future meetings:', error);
+//     throw new Error('Failed to fetch future meetings');
+//   }
+// } 
+
+export async function getFutureMeetings(userId: string, maxResults: number = 50) {
+  const calendar = await getCalendarClient(userId);
+  const now = new Date();
+
+  try {
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: now.toISOString(), // This should get all events from now onwards
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: maxResults, // Increased default limit
+      // Remove timeMax to get events indefinitely into the future
+    });
+
+    if (!response.data.items) {
+      return [];
+    }
+
+    return response.data.items.map(event => ({
+      id: event.id,
+      summary: event.summary,
+      description: event.description,
+      startTime: event.start?.dateTime || event.start?.date,
+      endTime: event.end?.dateTime || event.end?.date,
+      htmlLink: event.htmlLink,
+      status: event.status,
+      created: event.created,
+      updated: event.updated
+    }));
+  } catch (error) {
+    console.error('Error fetching future meetings:', error);
+    throw new Error('Failed to fetch future meetings');
+  }
+}
+
+// Alternative version with more explicit date handling
+export async function getAllFutureMeetings(userId: string, daysAhead: number = 30) {
+  const calendar = await getCalendarClient(userId);
+  const now = new Date();
+  const futureDate = new Date();
+  futureDate.setDate(now.getDate() + daysAhead);
+
+  try {
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: now.toISOString(),
+      timeMax: futureDate.toISOString(), // Explicitly set end date
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: 2500, // Google Calendar API max limit
+    });
+
+    if (!response.data.items) {
+      return [];
+    }
+
+    // Filter out all-day events that might be in the past
+    const futureEvents = response.data.items.filter(event => {
+      const eventStart = event.start?.dateTime || event.start?.date;
+      if (!eventStart) return false;
+      
+      const eventDate = new Date(eventStart);
+      return eventDate >= now;
+    });
+
+    return futureEvents.map(event => ({
+      id: event.id,
+      summary: event.summary,
+      description: event.description,
+      startTime: event.start?.dateTime || event.start?.date,
+      endTime: event.end?.dateTime || event.end?.date,
+      htmlLink: event.htmlLink,
+      status: event.status,
+      created: event.created,
+      updated: event.updated,
+      isAllDay: !event.start?.dateTime // Detect all-day events
+    }));
+  } catch (error) {
+    console.error('Error fetching future meetings:', error);
+    throw new Error('Failed to fetch future meetings');
   }
 } 

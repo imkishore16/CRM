@@ -9,7 +9,7 @@ import {
   similaritySearch,
   handleCampaignVariables
 } from "@/lib/serverUtils";
-import { addConversation } from "@/app/actions/prisma";
+import { addConversation,getMeetingsByUser } from "@/app/actions/prisma";
 import { parseToolCalls, handleToolCall } from "@/lib/toolParser";
 import { detectPersonalInfo } from "@/lib/personalInfoDetector";
 import { savePersonalInfoToVecDb } from "@/lib/personalInfoStorage";
@@ -88,7 +88,7 @@ async function processAggregatedMessages(model:any , mobileNumber: string, space
       const combinedQuery = messages.join(" ");
 
     
-    const [personalInfo, index, spaceData] = await Promise.all([
+    const [personalInfo, index, space] = await Promise.all([
         detectPersonalInfo(combinedQuery),
         fetchIndex(spaceId),
         prisma.space.findFirst({
@@ -111,13 +111,15 @@ async function processAggregatedMessages(model:any , mobileNumber: string, space
             relevantDocs, 
             campaignVariables, 
             customerData, 
-            productLinks
+            productLinks,
+            meetings
           ] = await Promise.all([
             fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index, spaceId),
             similaritySearch(combinedQuery, index),
             handleCampaignVariables(index, spaceId),
             fetchCustomerData(index, mobileNumber),
-            fetchProductLinks(index)
+            fetchProductLinks(index),
+            getMeetingsByUser(space?.userId ?? 0)
           ]);
       
           console.log("Fetched all necessary data in parallel");
@@ -129,35 +131,11 @@ async function processAggregatedMessages(model:any , mobileNumber: string, space
             customerData,
             productLinks,
             combinedConversations,
-            campaignVariables
+            campaignVariables,
+            meetings
           );
           console.log("generated response");
-    //   const personalInfo = await detectPersonalInfo(combinedQuery);
-    //   if (personalInfo) {
-    //       // Store personal info in separate vector DB
-    //       const personalInfoIndex = await fetchIndex(spaceId, "customerdata"); 
-    //       await savePersonalInfoToVecDb(model, mobileNumber, personalInfo, personalInfoIndex);
-    //   }
-    //   const index = await fetchIndex(spaceId)
-
-      
-    //   await addConversation(spaceId,mobileNumber,combinedQuery,"USER")
-
-    //   console.log(`Processing aggregated messages for ${mobileNumber}:`, combinedQuery);
-
-    //   console.log("starting")
-    //   const pastConversations = await fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index,spaceId);
-    //   console.log("Fetched past conversations")
-    //   const combinedConversations = pastConversations.join("\n");
-    //   console.log("fetched combined conversations")
-    //   const relevantDocs = await similaritySearch(combinedQuery, index);
-    //   console.log("fetched relevant docs")
-    //   const campaignVariables = await handleCampaignVariables(index, spaceId);
-    //   console.log("fetched campaign variables")
-    //   const customerData = await fetchCustomerData(index,mobileNumber)
-    //   const productLinks = await fetchProductLinks(index)
-    //   let response = await generateResponse(model,combinedQuery, relevantDocs, customerData,productLinks, combinedConversations, campaignVariables,);
-    //   console.log("generated response")
+    
 
       const toolCalls = parseToolCalls(response);
       for (const toolCall of toolCalls) {
@@ -195,10 +173,6 @@ async function processAggregatedMessages(model:any , mobileNumber: string, space
           }
       }
 
-    //   await saveConversationToVecDb(model,mobileNumber, combinedQuery, response, index);
-    //   await addConversation(spaceId,mobileNumber,response,"BOT")
-    //   await redis.del(userKey);
-    //   await redis.del(processingKey);
 
     await Promise.all([
         saveConversationToVecDb(model, mobileNumber, combinedQuery, response, index),

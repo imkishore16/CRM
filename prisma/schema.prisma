@@ -9,57 +9,96 @@ datasource db {
 }
 
 model User {
+  id               Int      @id @default(autoincrement())
   name             String?
   organizationName String?
   email            String   @unique
   password         String?
   role             Role     @default(USER)
   avatar           String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
   provider         Provider
-  id               Int      @id @default(autoincrement())
-  createdSpaces    Space[]  @relation("createdBy")
   googleAccessToken  String?
   googleRefreshToken String?
   googleTokenExpiry  DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
   meetings           Meeting[]
+  createdSpaces    Space[]  @relation("createdBy")
 }
 
 model Space {
   id     Int    @id @default(autoincrement())
   name   String
-  userId Int
-  user   User   @relation("createdBy", fields: [userId], references: [id])
   modelProvider String @default("gemini")
 
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Foreign Keys
+  userId        Int
+  
+  // Relations
+  user          User          @relation("createdBy", fields: [userId], references: [id], onDelete: Cascade)
+  customers     SpaceCustomer[]
+  conversations Conversation[]
+
+  @@index([userId])
+  @@index([name])
+  
 }
 
 model SpaceCustomer {
   id                 Int                @id @default(autoincrement())
-  spaceId            Int
   mobileNumber       String
   conversationStatus ConversationStatus 
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+ // Foreign Keys
+  spaceId            Int
+  
+  // Relations
+  space              Space              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@unique([spaceId, mobileNumber]) // Prevent duplicate customers per space
+  @@index([spaceId])
+  @@index([mobileNumber])
 }
 
 model Conversation {
   id           Int      @id @default(autoincrement())
-  spaceId      Int
+  content      String 
+  sender       SenderType
   mobileNumber String
-  sender  SenderType
-  content String 
+  
   createdAt    DateTime @default(now())
+  
+  // Foreign Keys
+  spaceId      Int
+  
+  // Relations
+  space        Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId])
+  @@index([mobileNumber])
+  @@index([createdAt])
 }
 
-// model Message {
-//   id Int @id @default(autoincrement())
-//   spaceId      Int
-//   conversationId Int
-//   content  String
-//   sender  SenderType
-//   timestamp  DateTime @default(now())
-//   conversation   Conversation @relation("ConversationMessages", fields: [conversationId], references: [id])
-// }
+model Meeting {
+  id          Int      @id @default(autoincrement())
+  eventId     String   @unique
+  startTime   DateTime
+  endTime     DateTime
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
 
 enum SenderType {
   USER
@@ -90,16 +129,3 @@ enum Provider {
   Spotify
 }
 
-model Meeting {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  eventId     String   @unique
-  startTime   DateTime
-  endTime     DateTime
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-}

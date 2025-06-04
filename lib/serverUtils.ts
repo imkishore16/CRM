@@ -8,8 +8,8 @@ import twilioClient from "@/clients/twilioClient";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { chatTemplate } from "@/constants/chatTemplate";
 import { CampaignVariables } from "@/types";
-import { addConversation } from "@/app/actions/prisma";
-import { fetchIndex, fetchProductLinks } from "@/app/actions/pc";
+import { addConversation ,getMeetingsByUser} from "@/app/actions/prisma";
+import { fetchIndex, fetchProductLinks} from "@/app/actions/pc";
 import { fetchCustomerData } from "@/app/actions/pc";
 
 
@@ -225,38 +225,50 @@ export async function processAggregatedMessages(llm:any , mobileNumber: string, 
       
       console.log(`Processing aggregated messages for ${mobileNumber}:`, combinedQuery);
       
-      // Process the query using your existing logic
+      const index = await fetchIndex(spaceId);
       
-      const index = await fetchIndex(spaceId)
-      
-      const pastConversations = await fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index,spaceId);
+      // Parallel execution of independent operations
+      const [
+        pastConversations,
+        relevantDocs,
+        campaignVariables,
+        customerData,
+        productLinks,
+        meetings
+      ] = await Promise.all([
+        fetchEnhancedConversationHistory(combinedQuery, mobileNumber, index, spaceId),
+        similaritySearch(combinedQuery, index),
+        handleCampaignVariables(index, spaceId),
+        fetchCustomerData(index, mobileNumber),
+        fetchProductLinks(index),
+        getMeetingsByUser(spaceId)
+      ]);
+
       const combinedConversations = pastConversations.join("\n");
-      const relevantDocs = await similaritySearch(combinedQuery, index);
-      const campaignVariables = await handleCampaignVariables(index, spaceId);
-      const customerData = await fetchCustomerData(index,mobileNumber)
-      const productLinks = await fetchProductLinks(index);
-      const response = await generateResponse(llm,combinedQuery, relevantDocs, customerData,productLinks, combinedConversations, campaignVariables);
+      const response = await generateResponse(llm, combinedQuery, relevantDocs, customerData, productLinks, combinedConversations, campaignVariables, meetings);
       
-      // Save the conversation
-      await saveConversationToVecDb(llm,mobileNumber, combinedQuery, response, index);
-      
-      await addConversation(spaceId,mobileNumber,response,"BOT")
-      
-      // Send the response via Twilio
-      await twilioClient.messages.create({
+      // Parallel execution of save and send operations
+      await Promise.all([
+        saveConversationToVecDb(llm, mobileNumber, combinedQuery, response, index),
+        addConversation(spaceId, mobileNumber, response, "BOT"),
+        twilioClient.messages.create({
           body: response,
           from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, 
           to: `whatsapp:${mobileNumber}` 
-      });
+        })
+      ]);
       
       // Clean up Redis after processing
-      await redis.del(userKey);
-      await redis.del(processingKey);
-      return response
+      await Promise.all([
+        redis.del(userKey),
+        redis.del(processingKey)
+      ]);
+
+      return response;
   } catch (error) {
       console.error(`Error processing messages for ${mobileNumber}:`, error);
       await redis.del(processingKey);
-      return "Something went wrong "
+      return "Something went wrong ";
   }
 }
 
@@ -455,7 +467,7 @@ export async function summarizeConversation(llm:any ,query: string, response: st
 }
 
 
-export async function generateResponse(llm:any ,query: string, context: string, customerData: string,productLinks:any,history: string,campaignVariables:CampaignVariables): Promise<string> {
+export async function generateResponse(llm:any ,query: string, context: string, customerData: string,productLinks:any,history: string,campaignVariables:CampaignVariables,meetings:any): Promise<string> {
   try {
     
     const promptTemplate = ChatPromptTemplate.fromTemplate(chatTemplate.default);
@@ -470,12 +482,15 @@ export async function generateResponse(llm:any ,query: string, context: string, 
       context,
       customerData,
       ...campaignVariables,
+      meetings,
       initialMessage: isFirstConversation ? campaignVariables.initialMessage : "",
       followUpMessage: !isFirstConversation ? campaignVariables.followUpMessage : ""
     });
     console.log("context : ", context)
     console.log("history : ", history)
     console.log("response from generateReposne function :" , response )
+
+
     return response;
     // need invoke a lot more stuff into chattemplate
     // if past conversation exists , dont introduce again , hello there again on a new conversation / reach out again , ie the user didnt reply or different campaign , or campagin rerun 

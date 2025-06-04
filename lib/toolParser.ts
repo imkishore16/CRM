@@ -7,7 +7,6 @@ type ToolCall = {
 
 export function parseToolCalls(text: string): ToolCall[] {
   const toolCallRegex = /\[TOOL_CALL:\s*(\w+)\((.*?)\)\]/g;
-  // const paramRegex = /(\w+)=([^,\s)]+)/g;
   const paramRegex = /(\w+)=(?:'([^']*)'|"([^"]*)"|([^,\s)]+))/g;
   const toolCalls: ToolCall[] = [];
 
@@ -19,9 +18,6 @@ export function parseToolCalls(text: string): ToolCall[] {
 
     let paramMatch;
     while ((paramMatch = paramRegex.exec(paramString)) !== null) {
-      // parameters[paramMatch[1]] = paramMatch[2];
-
-
        // The value could be in group 2 (single quotes), 3 (double quotes), or 4 (no quotes)
        const paramValue = paramMatch[2] !== undefined ? paramMatch[2] : 
        paramMatch[3] !== undefined ? paramMatch[3] : 
@@ -32,7 +28,6 @@ export function parseToolCalls(text: string): ToolCall[] {
       [TOOL_CALL: schedule_meeting(date='2025-05-10', time='14:30')]
       [TOOL_CALL: schedule_meeting(date=2025-05-10, time=14:30, description='Quarterly review meeting')]
  */
-
 
     }
 
@@ -138,7 +133,7 @@ async function handleCancelMeeting(params: Record<string, string>, userId: strin
     console.error('Error cancelling meeting:', error);
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
-        return 'This meeting appears to have been already cancelled or does not exist.';
+        return 'This meeting appears to have been already cancelled or does not exist.';      
       }
       return `Failed to cancel meeting: ${error.message}`;
     }

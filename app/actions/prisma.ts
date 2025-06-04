@@ -52,8 +52,6 @@ export async function fetchConversationHistory(spaceId: number, mobileNumber: st
   }
 }
 
-
-
 export const getUniqueMobileNumbersBySpace = async (spaceId: number) => {
   return await prisma.conversation.findMany({
     where: { spaceId },
@@ -72,6 +70,55 @@ export const getConversationsByMobileNumber = async (spaceId: number, mobileNumb
     orderBy: {
       createdAt: "desc",
     },
+  });
+};
+
+export const getMeetingsByUser = async (userId: number) => {
+  return await prisma.meeting.findMany({
+    where: {
+      userId,
+    },
+    orderBy: {
+      startTime: 'desc',
+    },
+  });
+};
+
+export const addMeeting = async (data: {
+  userId: number;
+  spaceId: number;
+  eventId: string;
+  startTime: Date;
+  endTime: Date;
+  description?: string;
+}) => {
+  return await prisma.meeting.create({
+    data,
+  });
+};
+
+export const deleteMeeting = async (meetingId: number) => {
+  return await prisma.meeting.delete({
+    where: {
+      id: meetingId,
+    },
+  });
+};
+
+export const updateMeeting = async (
+  meetingId: number,
+  data: {
+    eventId?: string;
+    startTime?: Date;
+    endTime?: Date;
+    description?: string;
+  }
+) => {
+  return await prisma.meeting.update({
+    where: {
+      id: meetingId,
+    },
+    data,
   });
 };
 
